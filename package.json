@@ -1,0 +1,31 @@
+{
+  "name": "screeps-cartographer",
+  "version": "2.1.0",
+  "description": "An advanced (and open source) movement library for Screeps",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "test": "jest",
+    "build": "rollup -c"
+  },
+  "keywords": [
+    "screeps",
+    "movement",
+    "traveling",
+    "path",
+    "pathfinding"
+  ],
+  "author": "LordGreywether",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^28.1.6",
+    "@types/screeps": "^3.3.0",
+    "jest": "^28.1.3",
+    "rollup": "^2.77.2",
+    "ts-jest": "^28.0.7",
+    "typescript": "^4.7.4"
+  }
+}
