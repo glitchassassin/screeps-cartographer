@@ -28,6 +28,18 @@ var __assign = function() {
     return __assign.apply(this, arguments);
 };
 
+function __values(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+}
+
 function __read(o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -55,32 +67,392 @@ function __spreadArray(to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 }
 
-var cache = new Map();
+var cache$1 = new Map();
+var expirationCache = new Map();
 var HeapCache = {
-    set: function (key, value) {
-        cache.set(key, value);
+    set: function (key, value, expiration) {
+        cache$1.set(key, value);
+        if (expiration !== undefined) {
+            expirationCache.set(key, expiration);
+        }
     },
     get: function (key) {
-        return cache.get(key);
+        return cache$1.get(key);
+    },
+    expires: function (key) {
+        return expirationCache.get(key);
     },
     delete: function (key) {
-        cache.delete(key);
+        cache$1.delete(key);
+    },
+    with: function () {
+        return HeapCache; // HeapCache never uses serializers
+    },
+    clean: function () {
+        var e_1, _a;
+        try {
+            for (var expirationCache_1 = __values(expirationCache), expirationCache_1_1 = expirationCache_1.next(); !expirationCache_1_1.done; expirationCache_1_1 = expirationCache_1.next()) {
+                var _b = __read(expirationCache_1_1.value, 2), key = _b[0], expires = _b[1];
+                if (Game.time >= expires) {
+                    HeapCache.delete(key);
+                    expirationCache.delete(key);
+                }
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (expirationCache_1_1 && !expirationCache_1_1.done && (_a = expirationCache_1.return)) _a.call(expirationCache_1);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
     }
 };
 
 var config = {
     DEFAULT_MOVE_OPTS: {
-        serializeMemory: false,
+        serializeMemory: true,
+        reusePath: 5,
         visualizePathStyle: {
             fill: 'transparent',
             stroke: '#fff',
             lineStyle: 'dashed',
             strokeWidth: 0.15,
             opacity: 0.1
-        }
+        },
+        avoidCreeps: true,
+        avoidObstacleStructures: true,
+        roadCost: 1,
+        plainCost: 2,
+        swampCost: 10
     },
-    MEMORY_CACHE_PATH: '_cg'
+    MEMORY_CACHE_PATH: '_cg',
+    MEMORY_CACHE_EXPIRATION_PATH: '_cge'
 };
+
+const MAX_DEPTH  = 53;       // Number.MAX_SAFE_INTEGER === (2^53 - 1)
+
+const // #define
+    SAFE_BITS           = 15,       // 15 of 16 UTF-16 bits
+    UNPRINTABLE_OFFSET  = 48,       // ASCII '0'
+    UPPER_BOUND         = 0xFFFF,   // Max 16 bit value
+    POWERS_OF_2 = [1,
+        2,                      4,                      8,                      16,
+        32,                     64,                     128,                    256,
+        512,                    1024,                   2048,                   4096,
+        8192,                   16384,                  32768,                  65536,
+        131072,                 262144,                 524288,                 1048576,
+        2097152,                4194304,                8388608,                16777216,
+        33554432,               67108864,               134217728,              268435456,
+        536870912,              1073741824,             2147483648,             4294967296,
+        8589934592,             17179869184,            34359738368,            68719476736,
+        137438953472,           274877906944,           549755813888,           1099511627776,
+        2199023255552,          4398046511104,          8796093022208,          17592186044416,
+        35184372088832,         70368744177664,         140737488355328,        281474976710656,
+        562949953421312,        1125899906842624,       2251799813685248,       4503599627370496,
+        9007199254740992        // 2^53 max
+    ];
+
+/// Maximum representable by SAFE_BITS number + 1 
+const UPPER_LIMIT = POWERS_OF_2[SAFE_BITS];
+
+/// Set of lib errors
+class RangeCodecError extends RangeError { constructor(msg) { super("[utf15][RangeError]: " + msg); } }
+class TypeCodecError  extends TypeError  { constructor(msg) { super("[utf15][TypeError]: "  + msg); } }
+
+
+/// Throws runtime exception in case of failed condition
+const assert = (condition, Err, ...str) => {
+    if(!condition) throw new Err(str.reduce((o,s) => (o+s+' '), '')); };
+
+/// @returns normalized UTF CodePoint
+const num_to_code_point = (x) => {
+    x = +x;
+    assert(x >= 0 && x < UPPER_LIMIT, RangeCodecError, 'x out of bounds:', x);
+    x += UNPRINTABLE_OFFSET;
+    return x;
+};
+
+/// @returns extracted unsigned value from CodePoint
+const code_point_to_num = (x) => {
+    x = +x;
+    assert(x >= 0 && x <= UPPER_BOUND, RangeCodecError, 'x out of bounds:', x);
+    x -= UNPRINTABLE_OFFSET;
+    return x;
+};
+
+const check_cfg = (cfg) => {
+    let fail = false;
+    fail = fail || isNaN(cfg.meta)  || (cfg.meta  !== 0 && cfg.meta  !== 1);
+    fail = fail || isNaN(cfg.array) || (cfg.array !== 0 && cfg.array !== 1);
+    if(!fail) (()=>{
+        const depth_is_array = Array.isArray(cfg.depth);
+        fail = fail || (depth_is_array && !cfg.array);
+        if(fail) return;
+        
+        const fail_depth = (x) => (isNaN(x) || x <= 0 || x > MAX_DEPTH);
+        if(depth_is_array) {
+            cfg.depth.forEach((d, idx) => {
+                cfg.depth[idx] = +cfg.depth[idx];
+                fail = fail || fail_depth(d);
+            });
+        } else {
+            cfg.depth = +cfg.depth;
+            fail = fail || fail_depth(cfg.depth);
+        }
+    })();
+    
+    if(fail) {
+        let str = '[JSON.stringify() ERROR]';
+        try { str = JSON.stringify(cfg); } finally {}
+        assert(0, TypeCodecError, 'Codec config is invalid:', str);
+    }
+};
+
+const serialize_meta = (str, meta) => {
+    const depth = Array.isArray(meta.depth) ? 0 : meta.depth;
+    return str + String.fromCodePoint(
+        num_to_code_point(meta.array),
+        num_to_code_point(depth));
+};
+
+const deserialize_meta = (str, meta, offset) => {
+    offset = offset || 0;
+    meta.array = code_point_to_num(str.codePointAt(offset    ));
+    meta.depth = code_point_to_num(str.codePointAt(offset + 1));
+    return [str.slice(offset + 2), 2];
+};
+
+function encode_array(res, values) {
+    const depth_is_array = Array.isArray(this.depth);
+    
+    const fixed_depth = depth_is_array ? 0 : this.depth;
+    const depths = depth_is_array ? this.depth : [];
+
+    assert(fixed_depth || depths.length === values.length, TypeCodecError,
+        'Wrong depths array length:', depths, values);
+
+    if(!depth_is_array) // Save array length as meta
+        res += String.fromCodePoint(num_to_code_point(values.length));
+
+    let symbol_done = 0, symbol_acc = 0;
+
+    // Cycle over values
+    for(let i = 0, len = values.length; i < len; ++i) {
+
+        // Current value and its bit depth
+        const value = values[i], depth = fixed_depth || depths[i];
+
+        // Cycle over value bits
+        for(let value_done = 0; value_done < depth;) {
+
+            const symbol_left   = SAFE_BITS - symbol_done;
+            const value_left    = depth - value_done;
+            const bits_to_write = Math.min(symbol_left, value_left);
+
+            let mask = Math.floor(value / POWERS_OF_2[value_done]);
+            mask %= POWERS_OF_2[bits_to_write];
+            mask *= POWERS_OF_2[symbol_done];
+
+            symbol_acc  += mask;
+            value_done  += bits_to_write;
+            symbol_done += bits_to_write;
+
+            // Output symbol ready, push it
+            if(symbol_done === SAFE_BITS) {
+                res += String.fromCodePoint(num_to_code_point(symbol_acc));
+                symbol_done = symbol_acc = 0;
+            }
+        }
+    }
+
+    if(symbol_done !== 0) // Last symbol left
+        res += String.fromCodePoint(num_to_code_point(symbol_acc));
+    
+    return res;
+}
+
+function decode_array(str, meta) {
+    assert(!this.meta || meta.depth > 0 || (meta.depth === 0 && Array.isArray(this.depth)),
+        TypeCodecError, 'Array decoding error (check inputs and codec config)');
+
+    meta.depth = meta.depth || this.depth;
+    const depth_is_array = Array.isArray(meta.depth);
+
+    let it = 0, i = 0;
+    const length = depth_is_array ? meta.depth.length : code_point_to_num(str.codePointAt(it++));
+    const fixed_depth = depth_is_array ? 0 : meta.depth;
+    const depths = depth_is_array ? meta.depth : [];
+    const values = new Array(length);
+    
+    let symbol_done = 0;
+    let chunk = code_point_to_num(str.codePointAt(it++));
+
+    // Cycle over values
+    while(i < length) {
+
+        const depth = fixed_depth || depths[i];
+        let value_acc = 0, value_done = 0;
+
+        // Cycle over value bits
+        while(value_done < depth) {
+            const symbol_left   = SAFE_BITS - symbol_done;
+            const value_left    = depth - value_done;
+            const bits_to_read  = Math.min(symbol_left, value_left);
+
+            let data = Math.floor(chunk / POWERS_OF_2[symbol_done]);
+            data %= POWERS_OF_2[bits_to_read];
+            data *= POWERS_OF_2[value_done];
+
+            value_acc   += data;
+            value_done  += bits_to_read;
+            symbol_done += bits_to_read;
+
+            // The whole symbol has been processed, move to next
+            if(symbol_done === SAFE_BITS) {
+                // It was the last code unit, break without iterators changing
+                if((i + 1) === length && value_done === depth) break;
+                chunk = code_point_to_num(str.codePointAt(it++));
+                symbol_done = 0;
+            }
+        }
+
+        if(value_done > 0)
+            values[i++] = value_acc;
+    }
+
+    return [values, it];
+}
+
+class Codec {
+    
+    /// Constructs codec by config or another serialized codec (this <=> cfg)
+    constructor(cfg) {
+        cfg = cfg || {};
+        this.meta   = +(!!cfg.meta);
+        this.array  = +(!!cfg.array);
+        this.depth  = cfg.depth || MAX_DEPTH;
+        check_cfg(this);
+    }
+    
+    /// @param arg -- single value or array of values to be encoded
+    /// @returns encoded string
+    encode(arg) {
+        assert((+Array.isArray(arg) | +(!!(arg).BYTES_PER_ELEMENT)) ^ !this.array, TypeCodecError,
+            'Incompatible codec (array <=> single value), arg =', arg);
+        
+        let res = '';
+
+        if(this.meta) // Save meta info
+            res = serialize_meta(res, this);
+        
+        if(this.array) {
+            // Effectively packs array of numbers
+            res = encode_array.call(this, res, arg);
+        } else {
+            // Packs single value, inline
+            let x = +arg % POWERS_OF_2[this.depth];
+            const len = Math.ceil(this.depth / SAFE_BITS);
+            for(let i = 0; i < len; ++i) {
+                const cp = num_to_code_point(x % UPPER_LIMIT);
+                res += String.fromCodePoint(cp);
+                x = Math.floor(x / UPPER_LIMIT);
+            }
+        }
+        
+        return res;
+    }
+
+    /// @param str -- string to be decoded
+    /// @param length_out -- output, read length will be saved as "length_out.length" (optional)
+    /// @returns decoded single value or array of values
+    decode(str, length_out) {
+        let meta = null;    // codec config
+        let length = 0;     // number of read code units
+        
+        if(this.meta) {
+            // Meta has been saved to str, restore
+            [str, length] = deserialize_meta(str, (meta = {}));
+        } else {
+            // Otherwise, use this config
+            meta = this;
+        }
+
+        assert(meta.array ^ !this.array, TypeCodecError,
+            'Incompatible codec (array <=> single value), str =', str);
+        
+        if(this.array) { // output is array of integers
+            const res = decode_array.call(this, str, meta);
+            !!length_out && (length_out.length = length + res[1]);
+            return res[0];
+        }
+
+        let acc = 0, pow = 0;
+        const len = Math.ceil(meta.depth / SAFE_BITS);
+        for(let i = 0; i < len; ++i) {
+            const x = code_point_to_num(str.codePointAt(i));
+            acc += x * POWERS_OF_2[pow];
+            pow += SAFE_BITS;
+        }
+
+        !!length_out && (length_out.length = length + len);
+        return acc;
+    }
+}
+
+var numberCodec = new Codec({ array: false });
+var NumberSerializer = {
+    serialize: function (target) {
+        if (target === undefined)
+            return undefined;
+        return numberCodec.encode(target);
+    },
+    deserialize: function (target) {
+        if (target === undefined)
+            return undefined;
+        return numberCodec.decode(target);
+    }
+};
+
+var cache = new Map();
+function cachedMap(strategy, serializer) {
+    var _a, _b;
+    var strategyMap = (_a = cache.get(strategy)) !== null && _a !== void 0 ? _a : new Map();
+    cache.set(strategy, strategyMap);
+    var serializerMap = (_b = strategyMap.get(serializer)) !== null && _b !== void 0 ? _b : new Map();
+    strategyMap.set(serializer, serializerMap);
+    return serializerMap;
+}
+var withSerializer = function (strategy, serializer) { return (__assign(__assign({}, strategy), { 
+    // override certain methods for serialization
+    get: function (key) {
+        var _a;
+        var map = cachedMap(strategy, serializer);
+        var serializedValue = strategy.get(key);
+        if (serializedValue === undefined)
+            map.delete(key); // make sure cache isn't expired
+        var value = (_a = map.get(key)) !== null && _a !== void 0 ? _a : serializer.deserialize(serializedValue);
+        if (value !== undefined)
+            map.set(key, value);
+        return value;
+    }, set: function (key, value) {
+        var v = serializer.serialize(value);
+        var map = cachedMap(strategy, serializer);
+        if (v) {
+            strategy.set(key, v);
+            map.set(key, value);
+        }
+        else {
+            strategy.delete(key);
+            map.delete(key);
+        }
+    }, delete: function (key) {
+        strategy.delete(key);
+        var map = cachedMap(strategy, serializer);
+        map.delete(key);
+    }, with: function (serializer) {
+        return withSerializer(strategy, serializer);
+    } })); };
 
 function memoryCache() {
     var _a;
@@ -88,15 +460,42 @@ function memoryCache() {
     (_a = Memory[_b = config.MEMORY_CACHE_PATH]) !== null && _a !== void 0 ? _a : (Memory[_b] = {});
     return Memory[config.MEMORY_CACHE_PATH];
 }
+function memoryExpirationCache() {
+    var _a;
+    var _b;
+    (_a = Memory[_b = config.MEMORY_CACHE_EXPIRATION_PATH]) !== null && _a !== void 0 ? _a : (Memory[_b] = {});
+    return Memory[config.MEMORY_CACHE_EXPIRATION_PATH];
+}
 var MemoryCache = {
-    set: function (key, value) {
+    set: function (key, value, expiration) {
         memoryCache()[key] = value;
+        if (expiration !== undefined) {
+            var expires = NumberSerializer.serialize(expiration);
+            if (expires)
+                memoryExpirationCache()[key] = expires;
+        }
     },
     get: function (key) {
         return memoryCache()[key];
     },
+    expires: function (key) {
+        return NumberSerializer.deserialize(memoryExpirationCache()[key]);
+    },
     delete: function (key) {
         delete memoryCache()[key];
+    },
+    with: function (serializer) {
+        return withSerializer(MemoryCache, serializer);
+    },
+    clean: function () {
+        var expirationCache = memoryExpirationCache();
+        for (var key in expirationCache) {
+            var expires = NumberSerializer.deserialize(expirationCache[key]);
+            if (expires !== undefined && Game.time >= expires) {
+                MemoryCache.delete(key);
+                delete expirationCache[key];
+            }
+        }
     }
 };
 
@@ -399,276 +798,6 @@ global.unpackPos = unpackPos;
 global.packPosList = packPosList;
 global.unpackPosList = unpackPosList;
 
-const MAX_DEPTH  = 53;       // Number.MAX_SAFE_INTEGER === (2^53 - 1)
-
-const // #define
-    SAFE_BITS           = 15,       // 15 of 16 UTF-16 bits
-    UNPRINTABLE_OFFSET  = 48,       // ASCII '0'
-    UPPER_BOUND         = 0xFFFF,   // Max 16 bit value
-    POWERS_OF_2 = [1,
-        2,                      4,                      8,                      16,
-        32,                     64,                     128,                    256,
-        512,                    1024,                   2048,                   4096,
-        8192,                   16384,                  32768,                  65536,
-        131072,                 262144,                 524288,                 1048576,
-        2097152,                4194304,                8388608,                16777216,
-        33554432,               67108864,               134217728,              268435456,
-        536870912,              1073741824,             2147483648,             4294967296,
-        8589934592,             17179869184,            34359738368,            68719476736,
-        137438953472,           274877906944,           549755813888,           1099511627776,
-        2199023255552,          4398046511104,          8796093022208,          17592186044416,
-        35184372088832,         70368744177664,         140737488355328,        281474976710656,
-        562949953421312,        1125899906842624,       2251799813685248,       4503599627370496,
-        9007199254740992        // 2^53 max
-    ];
-
-/// Maximum representable by SAFE_BITS number + 1 
-const UPPER_LIMIT = POWERS_OF_2[SAFE_BITS];
-
-/// Set of lib errors
-class RangeCodecError extends RangeError { constructor(msg) { super("[utf15][RangeError]: " + msg); } }
-class TypeCodecError  extends TypeError  { constructor(msg) { super("[utf15][TypeError]: "  + msg); } }
-
-
-/// Throws runtime exception in case of failed condition
-const assert = (condition, Err, ...str) => {
-    if(!condition) throw new Err(str.reduce((o,s) => (o+s+' '), '')); };
-
-/// @returns normalized UTF CodePoint
-const num_to_code_point = (x) => {
-    x = +x;
-    assert(x >= 0 && x < UPPER_LIMIT, RangeCodecError, 'x out of bounds:', x);
-    x += UNPRINTABLE_OFFSET;
-    return x;
-};
-
-/// @returns extracted unsigned value from CodePoint
-const code_point_to_num = (x) => {
-    x = +x;
-    assert(x >= 0 && x <= UPPER_BOUND, RangeCodecError, 'x out of bounds:', x);
-    x -= UNPRINTABLE_OFFSET;
-    return x;
-};
-
-const check_cfg = (cfg) => {
-    let fail = false;
-    fail = fail || isNaN(cfg.meta)  || (cfg.meta  !== 0 && cfg.meta  !== 1);
-    fail = fail || isNaN(cfg.array) || (cfg.array !== 0 && cfg.array !== 1);
-    if(!fail) (()=>{
-        const depth_is_array = Array.isArray(cfg.depth);
-        fail = fail || (depth_is_array && !cfg.array);
-        if(fail) return;
-        
-        const fail_depth = (x) => (isNaN(x) || x <= 0 || x > MAX_DEPTH);
-        if(depth_is_array) {
-            cfg.depth.forEach((d, idx) => {
-                cfg.depth[idx] = +cfg.depth[idx];
-                fail = fail || fail_depth(d);
-            });
-        } else {
-            cfg.depth = +cfg.depth;
-            fail = fail || fail_depth(cfg.depth);
-        }
-    })();
-    
-    if(fail) {
-        let str = '[JSON.stringify() ERROR]';
-        try { str = JSON.stringify(cfg); } finally {}
-        assert(0, TypeCodecError, 'Codec config is invalid:', str);
-    }
-};
-
-const serialize_meta = (str, meta) => {
-    const depth = Array.isArray(meta.depth) ? 0 : meta.depth;
-    return str + String.fromCodePoint(
-        num_to_code_point(meta.array),
-        num_to_code_point(depth));
-};
-
-const deserialize_meta = (str, meta, offset) => {
-    offset = offset || 0;
-    meta.array = code_point_to_num(str.codePointAt(offset    ));
-    meta.depth = code_point_to_num(str.codePointAt(offset + 1));
-    return [str.slice(offset + 2), 2];
-};
-
-function encode_array(res, values) {
-    const depth_is_array = Array.isArray(this.depth);
-    
-    const fixed_depth = depth_is_array ? 0 : this.depth;
-    const depths = depth_is_array ? this.depth : [];
-
-    assert(fixed_depth || depths.length === values.length, TypeCodecError,
-        'Wrong depths array length:', depths, values);
-
-    if(!depth_is_array) // Save array length as meta
-        res += String.fromCodePoint(num_to_code_point(values.length));
-
-    let symbol_done = 0, symbol_acc = 0;
-
-    // Cycle over values
-    for(let i = 0, len = values.length; i < len; ++i) {
-
-        // Current value and its bit depth
-        const value = values[i], depth = fixed_depth || depths[i];
-
-        // Cycle over value bits
-        for(let value_done = 0; value_done < depth;) {
-
-            const symbol_left   = SAFE_BITS - symbol_done;
-            const value_left    = depth - value_done;
-            const bits_to_write = Math.min(symbol_left, value_left);
-
-            let mask = Math.floor(value / POWERS_OF_2[value_done]);
-            mask %= POWERS_OF_2[bits_to_write];
-            mask *= POWERS_OF_2[symbol_done];
-
-            symbol_acc  += mask;
-            value_done  += bits_to_write;
-            symbol_done += bits_to_write;
-
-            // Output symbol ready, push it
-            if(symbol_done === SAFE_BITS) {
-                res += String.fromCodePoint(num_to_code_point(symbol_acc));
-                symbol_done = symbol_acc = 0;
-            }
-        }
-    }
-
-    if(symbol_done !== 0) // Last symbol left
-        res += String.fromCodePoint(num_to_code_point(symbol_acc));
-    
-    return res;
-}
-
-function decode_array(str, meta) {
-    assert(!this.meta || meta.depth > 0 || (meta.depth === 0 && Array.isArray(this.depth)),
-        TypeCodecError, 'Array decoding error (check inputs and codec config)');
-
-    meta.depth = meta.depth || this.depth;
-    const depth_is_array = Array.isArray(meta.depth);
-
-    let it = 0, i = 0;
-    const length = depth_is_array ? meta.depth.length : code_point_to_num(str.codePointAt(it++));
-    const fixed_depth = depth_is_array ? 0 : meta.depth;
-    const depths = depth_is_array ? meta.depth : [];
-    const values = new Array(length);
-    
-    let symbol_done = 0;
-    let chunk = code_point_to_num(str.codePointAt(it++));
-
-    // Cycle over values
-    while(i < length) {
-
-        const depth = fixed_depth || depths[i];
-        let value_acc = 0, value_done = 0;
-
-        // Cycle over value bits
-        while(value_done < depth) {
-            const symbol_left   = SAFE_BITS - symbol_done;
-            const value_left    = depth - value_done;
-            const bits_to_read  = Math.min(symbol_left, value_left);
-
-            let data = Math.floor(chunk / POWERS_OF_2[symbol_done]);
-            data %= POWERS_OF_2[bits_to_read];
-            data *= POWERS_OF_2[value_done];
-
-            value_acc   += data;
-            value_done  += bits_to_read;
-            symbol_done += bits_to_read;
-
-            // The whole symbol has been processed, move to next
-            if(symbol_done === SAFE_BITS) {
-                // It was the last code unit, break without iterators changing
-                if((i + 1) === length && value_done === depth) break;
-                chunk = code_point_to_num(str.codePointAt(it++));
-                symbol_done = 0;
-            }
-        }
-
-        if(value_done > 0)
-            values[i++] = value_acc;
-    }
-
-    return [values, it];
-}
-
-class Codec {
-    
-    /// Constructs codec by config or another serialized codec (this <=> cfg)
-    constructor(cfg) {
-        cfg = cfg || {};
-        this.meta   = +(!!cfg.meta);
-        this.array  = +(!!cfg.array);
-        this.depth  = cfg.depth || MAX_DEPTH;
-        check_cfg(this);
-    }
-    
-    /// @param arg -- single value or array of values to be encoded
-    /// @returns encoded string
-    encode(arg) {
-        assert((+Array.isArray(arg) | +(!!(arg).BYTES_PER_ELEMENT)) ^ !this.array, TypeCodecError,
-            'Incompatible codec (array <=> single value), arg =', arg);
-        
-        let res = '';
-
-        if(this.meta) // Save meta info
-            res = serialize_meta(res, this);
-        
-        if(this.array) {
-            // Effectively packs array of numbers
-            res = encode_array.call(this, res, arg);
-        } else {
-            // Packs single value, inline
-            let x = +arg % POWERS_OF_2[this.depth];
-            const len = Math.ceil(this.depth / SAFE_BITS);
-            for(let i = 0; i < len; ++i) {
-                const cp = num_to_code_point(x % UPPER_LIMIT);
-                res += String.fromCodePoint(cp);
-                x = Math.floor(x / UPPER_LIMIT);
-            }
-        }
-        
-        return res;
-    }
-
-    /// @param str -- string to be decoded
-    /// @param length_out -- output, read length will be saved as "length_out.length" (optional)
-    /// @returns decoded single value or array of values
-    decode(str, length_out) {
-        let meta = null;    // codec config
-        let length = 0;     // number of read code units
-        
-        if(this.meta) {
-            // Meta has been saved to str, restore
-            [str, length] = deserialize_meta(str, (meta = {}));
-        } else {
-            // Otherwise, use this config
-            meta = this;
-        }
-
-        assert(meta.array ^ !this.array, TypeCodecError,
-            'Incompatible codec (array <=> single value), str =', str);
-        
-        if(this.array) { // output is array of integers
-            const res = decode_array.call(this, str, meta);
-            !!length_out && (length_out.length = length + res[1]);
-            return res[0];
-        }
-
-        let acc = 0, pow = 0;
-        const len = Math.ceil(meta.depth / SAFE_BITS);
-        for(let i = 0; i < len; ++i) {
-            const x = code_point_to_num(str.codePointAt(i));
-            acc += x * POWERS_OF_2[pow];
-            pow += SAFE_BITS;
-        }
-
-        !!length_out && (length_out.length = length + len);
-        return acc;
-    }
-}
-
 /**
  * Note: this binds range at 32768, which should be plenty for MoveTarget purposes
  */
@@ -708,20 +837,18 @@ var MoveTargetListSerializer = {
     }
 };
 
-var numberCodec = new Codec({ array: false });
-var NumberSerializer = {
-    serialize: function (target) {
-        if (target === undefined)
+var PositionSerializer = {
+    serialize: function (pos) {
+        if (pos === undefined)
             return undefined;
-        return numberCodec.encode(target);
+        return packPos(pos);
     },
-    deserialize: function (target) {
-        if (target === undefined)
+    deserialize: function (pos) {
+        if (pos === undefined)
             return undefined;
-        return numberCodec.decode(target);
+        return unpackPos(pos);
     }
 };
-
 var PositionListSerializer = {
     serialize: function (pos) {
         if (pos === undefined)
@@ -734,24 +861,57 @@ var PositionListSerializer = {
         return unpackPosList(pos);
     }
 };
-
-var withSerializer = function (strategy, serializer) { return ({
-    get: function (key) {
-        return serializer.deserialize(strategy.get(key));
+var CoordSerializer = {
+    serialize: function (pos) {
+        if (pos === undefined)
+            return undefined;
+        return packCoord(pos);
     },
-    set: function (key, value) {
-        var v = serializer.serialize(value);
-        if (v) {
-            strategy.set(key, v);
-        }
-        else {
-            strategy.delete(key);
-        }
-    },
-    delete: function (key) {
-        strategy.delete(key);
+    deserialize: function (pos) {
+        if (pos === undefined)
+            return undefined;
+        return unpackCoord(pos);
     }
-}); };
+};
+var CoordListSerializer = {
+    serialize: function (pos) {
+        if (pos === undefined)
+            return undefined;
+        return packCoordList(pos);
+    },
+    deserialize: function (pos) {
+        if (pos === undefined)
+            return undefined;
+        return unpackCoordList(pos);
+    }
+};
+
+function cleanAllCaches() {
+    MemoryCache.clean();
+    HeapCache.clean();
+}
+
+var mutateCostMatrix = function (cm, room, opts) {
+    var _a, _b;
+    if (opts.avoidCreeps) {
+        (_a = Game.rooms[room]) === null || _a === void 0 ? void 0 : _a.find(FIND_CREEPS).forEach(function (c) { return cm.set(c.pos.x, c.pos.y, 255); });
+    }
+    if (opts.avoidObstacleStructures || opts.roadCost) {
+        (_b = Game.rooms[room]) === null || _b === void 0 ? void 0 : _b.find(FIND_STRUCTURES).forEach(function (s) {
+            if (opts.avoidObstacleStructures) {
+                if (OBSTACLE_OBJECT_TYPES.includes(s.structureType)) {
+                    cm.set(s.pos.x, s.pos.y, 255);
+                }
+            }
+            if (opts.roadCost) {
+                if (s instanceof StructureRoad && cm.get(s.pos.x, s.pos.y) !== 255) {
+                    cm.set(s.pos.x, s.pos.y, opts.roadCost);
+                }
+            }
+        });
+    }
+    return cm;
+};
 
 /**
  * 15 bits will be enough for three hex characters
@@ -779,13 +939,45 @@ var objectIdKey = function (id, key) {
 
 var creepKey = function (creep, key) { return objectIdKey(creep.id, key); };
 
+var profileCache = new Map();
+var profile = function (key, callback) {
+    var _a;
+    var list = (_a = profileCache.get(key)) !== null && _a !== void 0 ? _a : [];
+    profileCache.set(key, list);
+    var start = Game.cpu.getUsed();
+    var result = callback();
+    list.push(Math.max(0, Game.cpu.getUsed() - start));
+    return result;
+};
+var profileReport = function () {
+    var e_1, _a;
+    console.log();
+    var maxLength = Math.max.apply(Math, __spreadArray(['Profiling'.length - 2], __read(__spreadArray([], __read(profileCache.keys()), false).map(function (key) { return key.length; })), false));
+    var header = " ".concat(Game.time.toFixed(0).padEnd(maxLength + 2), " | Profiling Report");
+    console.log(header);
+    console.log(''.padEnd(header.length, '-'));
+    console.log(' Profiling'.padEnd(maxLength + 3), '| Count | Avg CPU');
+    try {
+        for (var profileCache_1 = __values(profileCache), profileCache_1_1 = profileCache_1.next(); !profileCache_1_1.done; profileCache_1_1 = profileCache_1.next()) {
+            var _b = __read(profileCache_1_1.value, 2), key = _b[0], values = _b[1];
+            console.log(' -', key.padEnd(maxLength), '|', values.length.toFixed(0).padStart(5, ' '), '|', (values.reduce(function (a, b) { return a + b; }, 0) / values.length).toFixed(3));
+        }
+    }
+    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+    finally {
+        try {
+            if (profileCache_1_1 && !profileCache_1_1.done && (_a = profileCache_1.return)) _a.call(profileCache_1);
+        }
+        finally { if (e_1) throw e_1.error; }
+    }
+};
+
 var keys = {
     CACHED_PATH: '_cp',
     CACHED_PATH_EXPIRES: '_ce',
     CACHED_PATH_TARGETS: '_ct'
 };
 function clearCachedPath(creep, cache) {
-    cache.delete(creepKey(creep, keys.CACHED_PATH_EXPIRES));
     cache.delete(creepKey(creep, keys.CACHED_PATH));
     cache.delete(creepKey(creep, keys.CACHED_PATH_TARGETS));
 }
@@ -798,14 +990,16 @@ function clearCachedPath(creep, cache) {
 var moveTo = function (creep, targets, opts) {
     // map defaults onto opts
     var actualOpts = __assign(__assign({}, config.DEFAULT_MOVE_OPTS), opts);
+    // select cache for path
     var cache = actualOpts.serializeMemory ? MemoryCache : HeapCache;
+    // convert target from whatever format to MoveTarget[]
     var normalizedTargets = [];
     if (Array.isArray(targets)) {
         if ('pos' in targets[0]) {
             normalizedTargets.push.apply(normalizedTargets, __spreadArray([], __read(targets), false));
         }
         else {
-            normalizedTargets.push.apply(normalizedTargets, __spreadArray([], __read(targets.map(function (pos) { return ({ pos: pos, range: 0 }); })), false));
+            normalizedTargets.push.apply(normalizedTargets, __spreadArray([], __read(targets.map(function (pos) { return ({ pos: pos, range: 1 }); })), false));
         }
     }
     else if ('pos' in targets) {
@@ -813,56 +1007,85 @@ var moveTo = function (creep, targets, opts) {
             normalizedTargets.push(targets);
         }
         else {
-            normalizedTargets.push({ pos: targets.pos, range: 0 });
+            normalizedTargets.push({ pos: targets.pos, range: 1 });
         }
     }
     else {
-        normalizedTargets.push({ pos: targets, range: 0 });
+        normalizedTargets.push({ pos: targets, range: 1 });
     }
-    // Check if creep is already at target
-    if (normalizedTargets.some(function (_a) {
+    var complete = normalizedTargets.some(function (_a) {
         var pos = _a.pos, range = _a.range;
         return pos.inRangeTo(creep.pos, range);
-    })) {
+    });
+    // Check if creep is already at target
+    if (complete) {
         return OK;
     }
-    // delete cached path if expired
-    var expires = withSerializer(cache, NumberSerializer).get(creepKey(creep, keys.CACHED_PATH_EXPIRES));
-    if (expires && expires <= Game.time) {
-        clearCachedPath(creep, cache);
-    }
     // delete cached path if targets don't match
-    if (MoveTargetListSerializer.serialize(normalizedTargets) !== cache.get(creepKey(creep, keys.CACHED_PATH_TARGETS))) {
+    var targetsDontMatch = MoveTargetListSerializer.serialize(normalizedTargets) !== cache.get(creepKey(creep, keys.CACHED_PATH_TARGETS));
+    if (targetsDontMatch) {
         clearCachedPath(creep, cache);
     }
     // Check if matching cached path exists
-    var cachedPath = withSerializer(cache, PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH));
+    var cachedPath = profile('deserializing path', function () {
+        return cache.with(PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH));
+    });
     // if not, generate a new one
-    cachedPath !== null && cachedPath !== void 0 ? cachedPath : (cachedPath = generateAndCachePath(creep, normalizedTargets, actualOpts, cache));
+    if (!cachedPath) {
+        cachedPath = profile('generating path', function () { return generateAndCachePath(creep, normalizedTargets, actualOpts, cache); });
+        if (cachedPath && !(Array.isArray(targets) || 'range' in targets)) {
+            // targets is a RoomPosition or _HasRoomPosition; add the last step back to the path
+            var lastStep = 'pos' in targets ? targets.pos : targets;
+            cachedPath.push(lastStep);
+        }
+    }
     if (!cachedPath)
         return ERR_NO_PATH;
-    // remove steps up to the creep's current position
-    cachedPath.splice(0, cachedPath.findIndex(function (pos) { return pos.isEqualTo(creep.pos); }));
-    withSerializer(cache, PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), cachedPath);
+    // remove steps up to the creep's current position and recache with same expiration
+    cachedPath.splice(0, cachedPath.findIndex(function (pos) { return pos.isEqualTo(creep.pos); }) + 1);
+    cache
+        .with(PositionListSerializer)
+        .set(creepKey(creep, keys.CACHED_PATH), cachedPath, cache.expires(creepKey(creep, keys.CACHED_PATH)));
     // visualize path
     if (actualOpts.visualizePathStyle) {
         creep.room.visual.poly(cachedPath, actualOpts.visualizePathStyle);
     }
-    return creep.moveByPath(cachedPath);
+    return profile('moving by path', function () { return creep.move(creep.pos.getDirectionTo(cachedPath[0])); });
 };
 function generateAndCachePath(creep, targets, opts, cache) {
-    var result = PathFinder.search(creep.pos, targets, opts);
+    // key to confirm if current path is the same as saved path
+    var targetKey = MoveTargetListSerializer.serialize(targets);
+    if (!targetKey)
+        return undefined;
+    // generate path
+    var result = PathFinder.search(creep.pos, targets, __assign(__assign({}, opts), { roomCallback: function (room) {
+            var _a;
+            var cm = (_a = opts.roomCallback) === null || _a === void 0 ? void 0 : _a.call(opts, room);
+            if (cm === false)
+                return cm;
+            cm = new PathFinder.CostMatrix();
+            return mutateCostMatrix(cm.clone(), room, {
+                avoidCreeps: opts.avoidCreeps,
+                avoidObstacleStructures: opts.avoidObstacleStructures,
+                roadCost: opts.roadCost
+            });
+        } }));
     if (!result.path.length)
         return undefined;
-    withSerializer(cache, PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result.path);
-    withSerializer(cache, MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), targets);
-    if (opts.reusePath !== undefined)
-        withSerializer(cache, NumberSerializer).set(creepKey(creep, keys.CACHED_PATH_EXPIRES), Game.time + opts.reusePath);
+    // path generation successful - cache results
+    var expiration = opts.reusePath ? Game.time + opts.reusePath + 1 : undefined;
+    cache.with(PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result.path, expiration);
+    cache.set(creepKey(creep, keys.CACHED_PATH_TARGETS), targetKey, expiration);
     return result.path;
+}
+
+function preTick() {
+    cleanAllCaches();
 }
 
 var _a;
 var runTestScenarios = function () {
+    preTick();
     for (var room in Game.rooms) {
         spawn(room);
     }
@@ -871,6 +1094,7 @@ var runTestScenarios = function () {
         roles[creep.memory.role](creep);
     }
     visualizeIntel();
+    profileReport();
 };
 (_a = Memory.rooms) !== null && _a !== void 0 ? _a : (Memory.rooms = {});
 var spawn = function (room) {
@@ -881,7 +1105,7 @@ var spawn = function (room) {
     if (creeps.filter(function (name) { return name.includes('WORKER'); }).length < 6) {
         // spawn a worker
         spawn.spawnCreep([WORK, MOVE, MOVE, CARRY], "".concat(room, "_WORKER_").concat(Game.time % 10000), {
-            memory: { room: room, role: 'worker' }
+            memory: { room: room, role: 'worker', useCartographer: Boolean(Math.round(Math.random())) }
         });
     }
     else if (creeps.filter(function (name) { return name.includes('SCOUT'); }).length < 6) {
@@ -907,11 +1131,16 @@ var roles = {
             }
             if (!creep.memory.harvestSource)
                 return;
-            var source = Game.getObjectById(creep.memory.harvestSource);
-            if (!source)
+            var source_1 = Game.getObjectById(creep.memory.harvestSource);
+            if (!source_1)
                 return;
-            if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-                moveTo(creep, source);
+            if (creep.harvest(source_1) === ERR_NOT_IN_RANGE) {
+                if (creep.memory.useCartographer) {
+                    profile('cg_perf', function () { return moveTo(creep, source_1); });
+                }
+                else {
+                    profile('mt_perf', function () { return creep.moveTo(source_1, { visualizePathStyle: { stroke: 'red' } }); });
+                }
             }
             else {
                 if (creep.store.getFreeCapacity() === 0) {
@@ -927,13 +1156,18 @@ var roles = {
             }
         }
         if (creep.memory.state === 'UPGRADE') {
-            var controller = Game.rooms[creep.memory.room].controller;
-            if (!controller) {
+            var controller_1 = Game.rooms[creep.memory.room].controller;
+            if (!controller_1) {
                 creep.memory.state = 'DEPOSIT';
                 return;
             }
-            if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-                moveTo(creep, controller);
+            if (creep.upgradeController(controller_1) === ERR_NOT_IN_RANGE) {
+                if (creep.memory.useCartographer) {
+                    profile('cg_perf', function () { return moveTo(creep, controller_1); });
+                }
+                else {
+                    profile('mt_perf', function () { return creep.moveTo(controller_1, { visualizePathStyle: { stroke: 'red' } }); });
+                }
             }
             else {
                 if (creep.store.getUsedCapacity() === 0) {
@@ -948,7 +1182,12 @@ var roles = {
                 return;
             }
             if (creep.transfer(spawn_1, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                moveTo(creep, spawn_1);
+                if (creep.memory.useCartographer) {
+                    profile('cg_perf', function () { return moveTo(creep, spawn_1); });
+                }
+                else {
+                    profile('mt_perf', function () { return creep.moveTo(spawn_1, { visualizePathStyle: { stroke: 'red' } }); });
+                }
             }
             else {
                 if (creep.store.getUsedCapacity() === 0) {
@@ -1004,6 +1243,17 @@ var loop = function () {
     runTestScenarios();
 };
 
+exports.CoordListSerializer = CoordListSerializer;
+exports.CoordSerializer = CoordSerializer;
+exports.HeapCache = HeapCache;
+exports.MemoryCache = MemoryCache;
+exports.MoveTargetListSerializer = MoveTargetListSerializer;
+exports.MoveTargetSerializer = MoveTargetSerializer;
+exports.NumberSerializer = NumberSerializer;
+exports.PositionListSerializer = PositionListSerializer;
+exports.PositionSerializer = PositionSerializer;
+exports.cleanAllCaches = cleanAllCaches;
 exports.loop = loop;
 exports.moveTo = moveTo;
+exports.preTick = preTick;
 //# sourceMappingURL=main.js.map

@@ -1,7 +1,10 @@
-import { moveTo } from 'lib/Cartographer';
+import { moveTo, preTick } from 'lib';
 import { packPos, packPosList } from 'utils/packrat';
+import { profile, profileReport } from 'utils/profiler';
 
 export const runTestScenarios = () => {
+  preTick();
+
   for (const room in Game.rooms) {
     spawn(room);
   }
@@ -10,6 +13,7 @@ export const runTestScenarios = () => {
     roles[creep.memory.role](creep);
   }
   visualizeIntel();
+  profileReport();
 };
 
 declare global {
@@ -19,12 +23,23 @@ declare global {
     harvestSource?: Id<Source>;
     room: string;
     scoutTarget?: string;
+    useCartographer?: boolean;
   }
   interface RoomMemory {
     visited?: boolean;
     sources?: string;
     controller?: string;
     exits?: string;
+  }
+  interface Memory {
+    cg_perf: {
+      sum: number;
+      count: number;
+    };
+    mt_perf: {
+      sum: number;
+      count: number;
+    };
   }
 }
 
@@ -37,7 +52,7 @@ const spawn = (room: string) => {
   if (creeps.filter(name => name.includes('WORKER')).length < 6) {
     // spawn a worker
     spawn.spawnCreep([WORK, MOVE, MOVE, CARRY], `${room}_WORKER_${Game.time % 10000}`, {
-      memory: { room, role: 'worker' }
+      memory: { room, role: 'worker', useCartographer: Boolean(Math.round(Math.random())) }
     });
   } else if (creeps.filter(name => name.includes('SCOUT')).length < 6) {
     // spawn a scout
@@ -66,7 +81,11 @@ const roles = {
       if (!source) return;
 
       if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-        moveTo(creep, source);
+        if (creep.memory.useCartographer) {
+          profile('cg_perf', () => moveTo(creep, source));
+        } else {
+          profile('mt_perf', () => creep.moveTo(source, { visualizePathStyle: { stroke: 'red' } }));
+        }
       } else {
         if (creep.store.getFreeCapacity() === 0) {
           delete creep.memory.harvestSource;
@@ -87,7 +106,11 @@ const roles = {
         return;
       }
       if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-        moveTo(creep, controller);
+        if (creep.memory.useCartographer) {
+          profile('cg_perf', () => moveTo(creep, controller));
+        } else {
+          profile('mt_perf', () => creep.moveTo(controller, { visualizePathStyle: { stroke: 'red' } }));
+        }
       } else {
         if (creep.store.getUsedCapacity() === 0) {
           creep.memory.state = 'HARVEST';
@@ -102,7 +125,11 @@ const roles = {
         return;
       }
       if (creep.transfer(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        moveTo(creep, spawn);
+        if (creep.memory.useCartographer) {
+          profile('cg_perf', () => moveTo(creep, spawn));
+        } else {
+          profile('mt_perf', () => creep.moveTo(spawn, { visualizePathStyle: { stroke: 'red' } }));
+        }
       } else {
         if (creep.store.getUsedCapacity() === 0) {
           creep.memory.state = 'HARVEST';

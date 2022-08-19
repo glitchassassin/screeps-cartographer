@@ -1,4 +1,4 @@
-export * from 'lib/Cartographer';
+export * from 'lib';
 
 import { runTestScenarios } from 'test';
 

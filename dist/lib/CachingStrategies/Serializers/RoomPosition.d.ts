@@ -1,4 +1,3 @@
-/// <reference types="screeps" />
 import { Coord } from 'utils/packrat';
 export declare const PositionSerializer: {
     serialize(pos?: RoomPosition): string | undefined;

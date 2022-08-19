@@ -11,4 +11,4 @@ declare global {
  * @param targets
  * @param opts
  */
-export declare const moveTo: (creep: Creep, targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[], opts?: MoveOpts) => -2 | CreepMoveReturnCode | -5 | -10;
+export declare const moveTo: (creep: Creep, targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[], opts?: MoveOpts) => -2 | CreepMoveReturnCode;
