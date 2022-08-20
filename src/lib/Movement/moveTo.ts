@@ -1,12 +1,11 @@
 import { MoveOpts, MoveTarget } from 'lib';
-import { CachingStrategy } from 'lib/CachingStrategies';
+import { CachingStrategy, MoveTargetListSerializer } from 'lib/CachingStrategies';
 import { HeapCache } from 'lib/CachingStrategies/Heap';
 import { MemoryCache } from 'lib/CachingStrategies/Memory';
-import { MoveTargetListSerializer } from 'lib/CachingStrategies/Serializers/MoveTarget';
 import { PositionListSerializer } from 'lib/CachingStrategies/Serializers/RoomPosition';
 import { mutateCostMatrix } from 'lib/CostMatrixes';
 import { creepKey } from 'lib/Keys/Creep';
-import { profile } from 'utils/profiler';
+// import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
 
 declare global {
@@ -38,6 +37,7 @@ export const moveTo = (
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
   opts?: MoveOpts
 ) => {
+  // logCpuStart();
   // map defaults onto opts
   const actualOpts: MoveOpts = {
     ...config.DEFAULT_MOVE_OPTS,
@@ -46,6 +46,8 @@ export const moveTo = (
 
   // select cache for path
   const cache = actualOpts.serializeMemory ? MemoryCache : HeapCache;
+
+  // logCpu('Setup');
 
   // convert target from whatever format to MoveTarget[]
   const normalizedTargets: MoveTarget[] = [];
@@ -65,46 +67,59 @@ export const moveTo = (
     normalizedTargets.push({ pos: targets, range: 1 });
   }
 
-  const complete = normalizedTargets.some(({ pos, range }) => pos.inRangeTo(creep.pos, range));
-  // Check if creep is already at target
-  if (complete) {
-    return OK;
+  // logCpu('Normalizing targets');
+
+  for (const { pos, range } of normalizedTargets) {
+    if (pos.inRangeTo(creep.pos, range)) return OK; // path complete
+    if (
+      !cache
+        .with(MoveTargetListSerializer)
+        .get(creepKey(creep, keys.CACHED_PATH_TARGETS))
+        ?.some(t => t && pos.isEqualTo(t.pos) && range === t.range)
+    ) {
+      // cached path had different targets
+      clearCachedPath(creep, cache);
+      break;
+    }
   }
 
-  // delete cached path if targets don't match
-  const targetsDontMatch =
-    MoveTargetListSerializer.serialize(normalizedTargets) !== cache.get(creepKey(creep, keys.CACHED_PATH_TARGETS));
-  if (targetsDontMatch) {
-    clearCachedPath(creep, cache);
-  }
+  // logCpu('Checking arrival and targets');
 
   // Check if matching cached path exists
-  let cachedPath = profile('deserializing path', () =>
-    cache.with(PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH))
-  );
+  let cachedPath = cache.with(PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH));
+
+  // logCpu('Deserializing path');
   // if not, generate a new one
   if (!cachedPath) {
-    cachedPath = profile('generating path', () => generateAndCachePath(creep, normalizedTargets, actualOpts, cache));
+    cachedPath = generateAndCachePath(creep, normalizedTargets, actualOpts, cache);
     if (cachedPath && !(Array.isArray(targets) || 'range' in targets)) {
       // targets is a RoomPosition or _HasRoomPosition; add the last step back to the path
       const lastStep = 'pos' in targets ? targets.pos : targets;
       cachedPath.push(lastStep);
     }
+    // logCpu('Plotting new path');
   }
 
   if (!cachedPath) return ERR_NO_PATH;
 
   // remove steps up to the creep's current position and recache with same expiration
-  cachedPath.splice(0, cachedPath.findIndex(pos => pos.isEqualTo(creep.pos)) + 1);
-  cache
-    .with(PositionListSerializer)
-    .set(creepKey(creep, keys.CACHED_PATH), cachedPath, cache.expires(creepKey(creep, keys.CACHED_PATH)));
+  const creepIndex = cachedPath.findIndex(pos => pos.isEqualTo(creep.pos));
+  cachedPath.splice(0, creepIndex + 1);
+  const key = creepKey(creep, keys.CACHED_PATH);
+  cache.set(key, cache.get(key).slice(2 * (creepIndex + 1)), cache.expires(key));
+
+  // logCpu('Serializing path');
 
   // visualize path
   if (actualOpts.visualizePathStyle) {
     creep.room.visual.poly(cachedPath, actualOpts.visualizePathStyle);
+    // logCpu('Visualizing path');
   }
-  return profile('moving by path', () => creep.move(creep.pos.getDirectionTo(cachedPath![0])));
+  const result = creep.move(creep.pos.getDirectionTo(cachedPath![0]));
+
+  // logCpu('Moving');
+
+  return result;
 };
 
 function generateAndCachePath(
@@ -113,10 +128,6 @@ function generateAndCachePath(
   opts: MoveOpts,
   cache: CachingStrategy
 ): RoomPosition[] | undefined {
-  // key to confirm if current path is the same as saved path
-  const targetKey = MoveTargetListSerializer.serialize(targets);
-  if (!targetKey) return undefined;
-
   // generate path
   const result = PathFinder.search(creep.pos, targets, {
     ...opts,
@@ -136,7 +147,7 @@ function generateAndCachePath(
   // path generation successful - cache results
   const expiration = opts.reusePath ? Game.time + opts.reusePath + 1 : undefined;
   cache.with(PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result.path, expiration);
-  cache.set(creepKey(creep, keys.CACHED_PATH_TARGETS), targetKey, expiration);
+  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), targets, expiration);
 
   return result.path;
 }

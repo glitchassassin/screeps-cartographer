@@ -1,6 +1,6 @@
 export const config = {
   DEFAULT_MOVE_OPTS: {
-    serializeMemory: true,
+    serializeMemory: false,
     reusePath: 5,
     visualizePathStyle: {
       fill: 'transparent',
