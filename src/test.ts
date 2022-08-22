@@ -152,7 +152,7 @@ const roles = {
     }
 
     // If we reached the previous target, pick a new one
-    if (creep.pos.roomName === creep.memory.scoutTarget) {
+    if (!creep.memory.scoutTarget || creep.pos.roomName === creep.memory.scoutTarget) {
       delete creep.memory.scoutTarget;
       for (const room in Memory.rooms) {
         if (!Memory.rooms[room].visited && !Object.values(Game.creeps).some(c => c.memory.scoutTarget === room)) {
