@@ -1,42 +1,43 @@
 import { CachingStrategy, GenericCachingStrategy, Serializer } from '.';
+import { HeapCache } from './Heap';
 
-const cache = new Map<CachingStrategy, Map<Serializer<any>, Map<string, any>>>();
+const cacheKey = <T>(serializer: Serializer<T>, key: string) => `cg_${serializer.key}_${key}`;
 
-function cachedMap(strategy: CachingStrategy, serializer: Serializer<any>): Map<string, any> {
-  const strategyMap = cache.get(strategy) ?? new Map<Serializer<any>, Map<string, any>>();
-  cache.set(strategy, strategyMap);
-  const serializerMap = strategyMap.get(serializer) ?? new Map<string, any>();
-  strategyMap.set(serializer, serializerMap);
-  return serializerMap;
-}
-
+/**
+ * Wraps the caching method with a serializer to read/write objects from the cache.
+ * Assumes serializers are idempotent - same input will produce the same deserialized
+ * output. Caches the deserialized output so it can be looked up quickly instead of
+ * running the (more expensive) deserialization each tick. These caches are cleaned
+ * up after CREEP_LIFE_TIME ticks or when the target item is deleted.
+ */
 export const withSerializer = <T>(strategy: CachingStrategy, serializer: Serializer<T>): GenericCachingStrategy<T> => ({
   // default most methods from strategy
   ...strategy,
   // override certain methods for serialization
   get(key: string): T | undefined {
-    const map = cachedMap(strategy, serializer);
     const serializedValue = strategy.get(key);
-    if (serializedValue === undefined) map.delete(key); // make sure cache isn't expired
-    const value = map.get(key) ?? serializer.deserialize(serializedValue);
-    if (value !== undefined) map.set(key, value);
+    if (!serializedValue) return undefined;
+    const value = HeapCache.get(cacheKey(serializer, serializedValue)) ?? serializer.deserialize(serializedValue);
+    if (value !== undefined) HeapCache.set(cacheKey(serializer, serializedValue), value, Game.time + CREEP_LIFE_TIME);
     return value;
   },
   set(key: string, value: T) {
+    // free previously cached deserialized value
+    const previous = strategy.get(key);
+    if (previous) HeapCache.delete(cacheKey(serializer, previous));
+
     const v = serializer.serialize(value);
-    const map = cachedMap(strategy, serializer);
     if (v) {
       strategy.set(key, v);
-      map.set(key, value);
+      HeapCache.set(cacheKey(serializer, v), value, Game.time + CREEP_LIFE_TIME);
     } else {
       strategy.delete(key);
-      map.delete(key);
     }
   },
   delete(key) {
+    const previous = strategy.get(key);
+    if (previous) HeapCache.delete(cacheKey(serializer, previous));
     strategy.delete(key);
-    const map = cachedMap(strategy, serializer);
-    map.delete(key);
   },
   with<T>(serializer: Serializer<T>) {
     return withSerializer(strategy, serializer);

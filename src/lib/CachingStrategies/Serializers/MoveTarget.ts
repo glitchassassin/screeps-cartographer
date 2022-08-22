@@ -1,4 +1,4 @@
-import { MoveTarget } from 'lib';
+import { MoveTarget, Serializer } from 'lib';
 import { packPos, unpackPos } from 'utils/packrat';
 import { Codec } from '../../../utils/screeps-utf15';
 
@@ -7,7 +7,8 @@ import { Codec } from '../../../utils/screeps-utf15';
  */
 const rangeCodec = new Codec({ array: false, depth: 15 });
 
-export const MoveTargetSerializer = {
+export const MoveTargetSerializer: Serializer<MoveTarget> = {
+  key: 'mts',
   serialize(target?: MoveTarget) {
     if (target === undefined) return undefined;
     return `${packPos(target.pos)}${rangeCodec.encode(target.range)}`;
@@ -24,7 +25,8 @@ export const MoveTargetSerializer = {
 /**
  * Move target serializes into three characters: two for position and one for range
  */
-export const MoveTargetListSerializer = {
+export const MoveTargetListSerializer: Serializer<MoveTarget[]> = {
+  key: 'mtls',
   serialize(target?: MoveTarget[]) {
     if (target === undefined) return undefined;
     return target.map(t => MoveTargetSerializer.serialize(t)).join('');
@@ -33,7 +35,8 @@ export const MoveTargetListSerializer = {
     if (target === undefined) return undefined;
     const targets = [];
     for (let i = 0; i < target.length; i += 3) {
-      targets.push(MoveTargetSerializer.deserialize(target.slice(i, 3)));
+      const t = MoveTargetSerializer.deserialize(target.slice(i, 3));
+      if (t) targets.push(t);
     }
     return targets;
   }

@@ -6,7 +6,7 @@ import { Codec } from '../../utils/screeps-utf15';
 const codec = new Codec({ array: false, depth: 15 });
 
 /**
- * `id` should be a hex string
+ * Derives a cache key namespaced to a particular object. `id` should be a hex string
  */
 export const objectIdKey = (id: string, key?: string) => {
   if (!id.length) throw new Error('Empty id');

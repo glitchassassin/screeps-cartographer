@@ -43,6 +43,9 @@
  * The following lines would be better placed in your declarations files
  */
 
+/**
+ * An x/y coordinate
+ */
 export interface Coord {
   x: number;
   y: number;

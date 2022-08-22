@@ -1,3 +1,4 @@
+import { Serializer } from 'lib';
 import {
   Coord,
   packCoord,
@@ -10,7 +11,8 @@ import {
   unpackPosList
 } from 'utils/packrat';
 
-export const PositionSerializer = {
+export const PositionSerializer: Serializer<RoomPosition> = {
+  key: 'ps',
   serialize(pos?: RoomPosition) {
     if (pos === undefined) return undefined;
     return packPos(pos);
@@ -21,7 +23,8 @@ export const PositionSerializer = {
   }
 };
 
-export const PositionListSerializer = {
+export const PositionListSerializer: Serializer<RoomPosition[]> = {
+  key: 'pls',
   serialize(pos?: RoomPosition[]) {
     if (pos === undefined) return undefined;
     return packPosList(pos);
@@ -32,7 +35,8 @@ export const PositionListSerializer = {
   }
 };
 
-export const CoordSerializer = {
+export const CoordSerializer: Serializer<Coord> = {
+  key: 'cs',
   serialize(pos?: Coord) {
     if (pos === undefined) return undefined;
     return packCoord(pos);
@@ -43,7 +47,8 @@ export const CoordSerializer = {
   }
 };
 
-export const CoordListSerializer = {
+export const CoordListSerializer: Serializer<Coord[]> = {
+  key: 'cls',
   serialize(pos?: Coord[]) {
     if (pos === undefined) return undefined;
     return packCoordList(pos);
