@@ -82,9 +82,9 @@ const roles = {
 
       if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
         if (creep.memory.useCartographer) {
-          profile('cg_perf', () => moveTo(creep, source));
+          profile('cg_perf', () => moveTo(creep, source, { visualizePathStyle: { stroke: 'cyan' } }));
         } else {
-          profile('mt_perf', () => creep.moveTo(source, { visualizePathStyle: { stroke: 'red' } }));
+          profile('mt_perf', () => creep.moveTo(source, { visualizePathStyle: { stroke: 'magenta' } }));
         }
       } else {
         if (creep.store.getFreeCapacity() === 0) {
@@ -107,9 +107,9 @@ const roles = {
       }
       if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
         if (creep.memory.useCartographer) {
-          profile('cg_perf', () => moveTo(creep, controller));
+          profile('cg_perf', () => moveTo(creep, controller, { visualizePathStyle: { stroke: 'cyan' } }));
         } else {
-          profile('mt_perf', () => creep.moveTo(controller, { visualizePathStyle: { stroke: 'red' } }));
+          profile('mt_perf', () => creep.moveTo(controller, { visualizePathStyle: { stroke: 'magenta' } }));
         }
       } else {
         if (creep.store.getUsedCapacity() === 0) {
@@ -126,9 +126,9 @@ const roles = {
       }
       if (creep.transfer(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
         if (creep.memory.useCartographer) {
-          profile('cg_perf', () => moveTo(creep, spawn));
+          profile('cg_perf', () => moveTo(creep, spawn, { visualizePathStyle: { stroke: 'cyan' } }));
         } else {
-          profile('mt_perf', () => creep.moveTo(spawn, { visualizePathStyle: { stroke: 'red' } }));
+          profile('mt_perf', () => creep.moveTo(spawn, { visualizePathStyle: { stroke: 'magenta' } }));
         }
       } else {
         if (creep.store.getUsedCapacity() === 0) {
@@ -163,7 +163,11 @@ const roles = {
     }
     if (!creep.memory.scoutTarget) return; // no more rooms to scout
 
-    moveTo(creep, { pos: new RoomPosition(25, 25, creep.memory.scoutTarget), range: 20 });
+    moveTo(
+      creep,
+      { pos: new RoomPosition(25, 25, creep.memory.scoutTarget), range: 20 },
+      { visualizePathStyle: { stroke: 'cyan' } }
+    );
   }
 };
 

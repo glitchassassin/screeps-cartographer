@@ -5,11 +5,15 @@ import {
   GenericCachingStrategy,
   MoveTargetListSerializer
 } from 'lib/CachingStrategies';
+import { JsonSerializer } from 'lib/CachingStrategies/Serializers/Json';
 import { PositionListSerializer } from 'lib/CachingStrategies/Serializers/RoomPosition';
 import { mutateCostMatrix } from 'lib/CostMatrixes';
 import { creepKey } from 'lib/Keys/Creep';
+import { logCpu, logCpuStart } from 'utils/logCpu';
 // import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
+
+const DEBUG = false;
 
 declare global {
   interface CreepMemory {
@@ -25,6 +29,15 @@ const keys = {
   CACHED_PATH_OPTS: '_co'
 };
 
+const optCacheFields: (keyof MoveOpts)[] = [
+  'avoidCreeps',
+  'avoidObstacleStructures',
+  'flee',
+  'plainCost',
+  'swampCost',
+  'roadCost'
+];
+
 /**
  * Clears all data for a cached path (useful to force a repath)
  */
@@ -33,11 +46,6 @@ export function clearCachedPath(creep: Creep, cache: GenericCachingStrategy<any>
   cache.delete(creepKey(creep, keys.CACHED_PATH_TARGETS));
   cache.delete(creepKey(creep, keys.CACHED_PATH_OPTS));
 }
-
-const serializeOpts = (opts?: MoveOpts) =>
-  `${opts?.flee ? 'y' : 'n'}${opts?.avoidCreeps ? 'y' : 'n'}${opts?.avoidObstacleStructures ? 'y' : 'n'}${
-    opts?.plainCost ?? '0'
-  }${opts?.swampCost ?? '0'}${opts?.roadCost ?? '0'}`;
 
 /**
  * Replacement for the builtin moveTo, but passes through options to PathFinder. Supports
@@ -48,20 +56,17 @@ export const moveTo = (
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
   opts?: MoveOpts
 ) => {
+  if (DEBUG) logCpuStart();
   // map defaults onto opts
   const actualOpts: MoveOpts = {
     ...config.DEFAULT_MOVE_OPTS,
     ...opts
   };
-  if (opts?.visualizePathStyle) {
-    actualOpts.visualizePathStyle = {
-      ...config.DEFAULT_VISUALIZE_OPTS,
-      ...opts.visualizePathStyle
-    };
-  }
+
+  if (DEBUG) logCpu('mapping opts');
 
   // select cache for path
-  const cache = actualOpts.cache ?? CachingStrategies.HeapCache;
+  const cache = opts?.cache ?? CachingStrategies.HeapCache;
 
   // convert target from whatever format to MoveTarget[]
   const normalizedTargets: MoveTarget[] = [];
@@ -81,10 +86,15 @@ export const moveTo = (
     normalizedTargets.push({ pos: targets, range: 1 });
   }
 
+  if (DEBUG) logCpu('normalizing targets');
+
   // if relevant opts have changed, clear cached path
-  if (cache.get(creepKey(creep, keys.CACHED_PATH_OPTS)) !== serializeOpts(opts)) {
+  const cachedOpts = cache.with(JsonSerializer).get(creepKey(creep, keys.CACHED_PATH_OPTS));
+  if (!cachedOpts || optCacheFields.some(f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f])) {
     clearCachedPath(creep, cache);
   }
+
+  if (DEBUG) logCpu('checking opts');
 
   let needToFlee = false;
   let cachedTargets = cache.with(MoveTargetListSerializer).get(creepKey(creep, keys.CACHED_PATH_TARGETS));
@@ -103,12 +113,15 @@ export const moveTo = (
       // cached path had different targets
       clearCachedPath(creep, cache);
       cachedTargets = undefined;
-      break;
     }
   }
 
+  if (DEBUG) logCpu('checking targets');
+
   // Check if matching cached path exists
   let cachedPath = cache.with(PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH));
+
+  if (DEBUG) logCpu('fetching cached path');
 
   // if not, generate a new one
   if (!cachedPath) {
@@ -118,6 +131,7 @@ export const moveTo = (
       const lastStep = 'pos' in targets ? targets.pos : targets;
       cachedPath.push(lastStep);
     }
+    if (DEBUG) logCpu('generating path');
   }
 
   if (!cachedPath) return ERR_NO_PATH;
@@ -127,12 +141,20 @@ export const moveTo = (
   cachedPath.splice(0, creepIndex + 1);
   const key = creepKey(creep, keys.CACHED_PATH);
   cache.set(key, cache.get(key).slice(2 * (creepIndex + 1)), cache.expires(key));
+  if (DEBUG) logCpu('truncating path');
 
   // visualize path
   if (actualOpts.visualizePathStyle) {
-    creep.room.visual.poly(cachedPath, actualOpts.visualizePathStyle);
+    const style = {
+      ...config.DEFAULT_VISUALIZE_OPTS,
+      ...actualOpts.visualizePathStyle
+    };
+    creep.room.visual.poly(cachedPath, style);
+    if (DEBUG) logCpu('visualizing path');
   }
+
   const result = creep.move(creep.pos.getDirectionTo(cachedPath![0]));
+  if (DEBUG) logCpu('moving along path');
 
   return result;
 };
@@ -163,7 +185,14 @@ function generateAndCachePath(
   const expiration = opts.reusePath ? Game.time + opts.reusePath + 1 : undefined;
   cache.with(PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result.path, expiration);
   cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), targets, expiration);
-  cache.set(creepKey(creep, keys.CACHED_PATH_OPTS), serializeOpts(opts), expiration);
+  cache.with(JsonSerializer).set(
+    creepKey(creep, keys.CACHED_PATH_OPTS),
+    optCacheFields.reduce((sum, f) => {
+      sum[f] = opts[f] as any;
+      return sum;
+    }, {} as MoveOpts),
+    expiration
+  );
 
   return result.path;
 }
