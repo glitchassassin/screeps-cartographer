@@ -1,7 +1,6 @@
 export const config = {
   DEFAULT_MOVE_OPTS: {
-    reusePath: 5,
-    avoidCreeps: true,
+    avoidCreeps: false,
     avoidObstacleStructures: true,
     roadCost: 1,
     plainCost: 2,
