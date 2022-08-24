@@ -1,6 +1,6 @@
 export * from 'lib';
 
-import { runTestScenarios } from 'test';
+import { runTestScenarios } from 'tests';
 
 export const loop = () => {
   runTestScenarios();

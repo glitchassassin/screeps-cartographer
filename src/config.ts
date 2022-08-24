@@ -1,11 +1,14 @@
+import { MoveOpts } from 'lib';
+
 export const config = {
   DEFAULT_MOVE_OPTS: {
     avoidCreeps: false,
     avoidObstacleStructures: true,
+    keepTargetInRoom: true,
     roadCost: 1,
     plainCost: 2,
     swampCost: 10
-  },
+  } as MoveOpts,
   DEFAULT_VISUALIZE_OPTS: {
     fill: 'transparent',
     stroke: '#fff',

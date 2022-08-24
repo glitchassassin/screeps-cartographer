@@ -9,7 +9,7 @@ const codec = new Codec({ array: false, depth: 15 });
  * Derives a cache key namespaced to a particular object. `id` should be a hex string
  */
 export const objectIdKey = (id: string, key?: string) => {
-  if (!id.length) throw new Error('Empty id');
+  if (!id || !id.length) throw new Error('Empty id');
   let paddedId = id;
   // pad id if needed
   if (paddedId.length % 3 !== 0) {

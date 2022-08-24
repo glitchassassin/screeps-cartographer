@@ -10,6 +10,7 @@ import { PositionListSerializer } from 'lib/CachingStrategies/Serializers/RoomPo
 import { mutateCostMatrix } from 'lib/CostMatrixes';
 import { creepKey } from 'lib/Keys/Creep';
 import { logCpu, logCpuStart } from 'utils/logCpu';
+import { Coord } from 'utils/packrat';
 // import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
 
@@ -69,7 +70,7 @@ export const moveTo = (
   const cache = opts?.cache ?? CachingStrategies.HeapCache;
 
   // convert target from whatever format to MoveTarget[]
-  const normalizedTargets: MoveTarget[] = [];
+  let normalizedTargets: MoveTarget[] = [];
   if (Array.isArray(targets)) {
     if ('pos' in targets[0]) {
       normalizedTargets.push(...(targets as MoveTarget[]));
@@ -85,6 +86,7 @@ export const moveTo = (
   } else {
     normalizedTargets.push({ pos: targets, range: 1 });
   }
+  if (actualOpts.keepTargetInRoom) normalizedTargets = normalizedTargets.flatMap(fixEdgePosition);
 
   if (DEBUG) logCpu('normalizing targets');
 
@@ -100,7 +102,7 @@ export const moveTo = (
   let cachedTargets = cache.with(MoveTargetListSerializer).get(creepKey(creep, keys.CACHED_PATH_TARGETS));
   for (const { pos, range } of normalizedTargets) {
     // check if movement is complete
-    if (!needToFlee && pos.inRangeTo(creep.pos, range)) {
+    if (!needToFlee && pos.inRangeTo(creep.pos, range) && creep.pos.roomName === pos.roomName) {
       if (!opts?.flee) {
         clearCachedPath(creep, cache);
         return OK; // no need to move, path complete
@@ -158,6 +160,33 @@ export const moveTo = (
 
   return result;
 };
+
+function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
+  if (pos.x > range && 49 - pos.x > range && pos.y > range && 49 - pos.y > range) {
+    return [{ pos, range }]; // no action needed
+  }
+  // generate quadrants
+  const rect = {
+    x1: Math.max(1, pos.x - range),
+    x2: Math.min(48, pos.x + range),
+    y1: Math.max(1, pos.y - range),
+    y2: Math.min(48, pos.y + range)
+  };
+  const quadrantRange = Math.ceil((Math.min(rect.x2 - rect.x1, rect.y2 - rect.y1) - 1) / 2);
+  const quadrants = [
+    { x: rect.x1 + quadrantRange, y: rect.y1 + quadrantRange },
+    { x: rect.x1 + quadrantRange, y: rect.y2 - quadrantRange },
+    { x: rect.x2 - quadrantRange, y: rect.y2 - quadrantRange },
+    { x: rect.x2 - quadrantRange, y: rect.y1 + quadrantRange }
+  ]
+    .reduce((set, coord) => {
+      if (!set.some(c => c.x === coord.x && c.y === coord.y)) set.push(coord);
+      return set;
+    }, [] as Coord[])
+    .map(coord => ({ pos: new RoomPosition(coord.x, coord.y, pos.roomName), range: quadrantRange }));
+
+  return quadrants;
+}
 
 function generateAndCachePath(
   creep: Creep,

@@ -62,6 +62,6 @@ You can find the full list of [extra options here.](https://glitchassassin.githu
 
 ## Testing Cartographer
 
-Cartographer includes a super-minimal Screeps bot which will maintain a spawn and generate scouts to collect room intelligence. This allows roads to be generated and visualized for debugging purposes.
+Cartographer includes a super-minimal Screeps bot which will maintain a spawn and generate scouts to collect room intelligence. This allows roads to be generated and visualized for debugging purposes, and also enables integration tests to catch regressions.
 
-To run the test, simply run the build and copy the contents of `dist/main.js` to Screeps. If the scouts have mapped all the rooms they can reach, you can set `Memory.rooms = {}` to start them roaming again.
+To run the tests, simply run the build and copy the contents of `dist/main.js` to Screeps. The tests will reset and run again automatically after a global reset. Test output is logged to the console.

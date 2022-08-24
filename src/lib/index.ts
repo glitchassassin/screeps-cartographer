@@ -15,6 +15,10 @@ export interface MoveOpts extends PathFinderOpts {
    */
   visualizePathStyle?: PolyStyle;
   /**
+   * If target range would extend out of the target room, trim to keep target in room
+   */
+  keepTargetInRoom?: boolean;
+  /**
    * Automatically populates cost matrix with creep positions.
    */
   avoidCreeps?: boolean;
@@ -38,6 +42,7 @@ export interface MoveOpts extends PathFinderOpts {
 
 export * from './CachingStrategies';
 export * from './Movement/moveTo';
+export * from './Movement/selectors';
 
 export function preTick() {
   cleanAllCaches();
