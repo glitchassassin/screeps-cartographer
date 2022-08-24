@@ -1,6 +1,6 @@
 {
   "name": "screeps-cartographer",
-  "version": "2.1.0",
+  "version": "1.0.0",
   "description": "An advanced (and open source) movement library for Screeps",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
