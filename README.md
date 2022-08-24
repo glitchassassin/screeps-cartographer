@@ -49,9 +49,9 @@ You can also pass in options, including some custom flags and anything supported
 
 ```ts
 // flee from target
-moveTo(creep, hostileCreep, { flee: true });
+moveTo(creep, { pos: hostileCreep.pos, range: 3 }, { flee: true });
 // repath after a certain number of ticks, like stock moveTo
-moveTo(creep, hostileCreep, { reusePath: 5 });
+moveTo(creep, creep.room.storage, { reusePath: 5 });
 // path around creeps (default is false)
 moveTo(creep, creep.room.storage, { avoidCreeps: true });
 // don't path around structures (default is false)
