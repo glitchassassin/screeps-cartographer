@@ -54,6 +54,9 @@ moveTo(creep, { pos: hostileCreep.pos, range: 3 }, { flee: true });
 moveTo(creep, creep.room.storage, { reusePath: 5 });
 // path around creeps (default is false)
 moveTo(creep, creep.room.storage, { avoidCreeps: true });
+// set repath interval when creep is stuck, and fallback
+// options for the repath
+moveTo(creep, creep.room.storage, { avoidCreeps: false, repathIfStuck: 5 }, { avoidCreeps: true });
 // don't path around structures (default is true)
 moveTo(creep, creep.room.storage, { avoidObstacleStructures: false });
 // set custom terrain values

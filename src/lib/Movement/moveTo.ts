@@ -13,6 +13,7 @@ import { logCpu, logCpuStart } from 'utils/logCpu';
 import { Coord } from 'utils/packrat';
 // import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
+import { creepIsStuck } from './creepIsStuck';
 
 const DEBUG = false;
 
@@ -51,15 +52,20 @@ export function clearCachedPath(creep: Creep, cache: GenericCachingStrategy<any>
 /**
  * Replacement for the builtin moveTo, but passes through options to PathFinder. Supports
  * multiple targets, flee, etc. See `MoveOpts`.
+ *
+ * If fallbackOpts is specified, the options will override `opts` *only* if `repathIfStuck`
+ * triggers a repath. This lets you ignore creeps until a creep gets stuck, then repath around
+ * them, for example.
  */
 export const moveTo = (
   creep: Creep,
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
-  opts?: MoveOpts
+  opts?: MoveOpts,
+  fallbackOpts: MoveOpts = { avoidCreeps: true }
 ) => {
   if (DEBUG) logCpuStart();
   // map defaults onto opts
-  const actualOpts: MoveOpts = {
+  let actualOpts: MoveOpts = {
     ...config.DEFAULT_MOVE_OPTS,
     ...opts
   };
@@ -119,6 +125,21 @@ export const moveTo = (
   }
 
   if (DEBUG) logCpu('checking targets');
+
+  // If creep is stuck, we need to repath
+  if (
+    actualOpts.repathIfStuck &&
+    cache.get(creepKey(creep, keys.CACHED_PATH)) &&
+    creepIsStuck(creep, actualOpts.repathIfStuck)
+  ) {
+    clearCachedPath(creep, cache);
+    actualOpts = {
+      ...actualOpts,
+      ...fallbackOpts
+    };
+  }
+
+  if (DEBUG) logCpu('checking if creep is stuck');
 
   // Check if matching cached path exists
   let cachedPath = cache.with(PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH));
