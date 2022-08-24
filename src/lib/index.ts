@@ -7,9 +7,15 @@ export interface MoveOpts extends PathFinderOpts {
    */
   cache?: CachingStrategy;
   /**
-   * Number of ticks to save a cached path before repathing.
+   * Number of ticks to save a cached path before repathing. If undefined,
+   * cached path will be reused indefinitely. Default is undefined.
    */
   reusePath?: number;
+  /**
+   * Number of ticks to wait for a creep to become unstuck before repathing
+   * with the fallbackOpts. Default is 3.
+   */
+  repathIfStuck?: number;
   /**
    * If set, will visualize the path using provided styles.
    */

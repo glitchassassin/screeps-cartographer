@@ -5,6 +5,7 @@ export const config = {
     avoidCreeps: false,
     avoidObstacleStructures: true,
     keepTargetInRoom: true,
+    repathIfStuck: 3,
     roadCost: 1,
     plainCost: 2,
     swampCost: 10
