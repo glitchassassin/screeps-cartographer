@@ -2,11 +2,25 @@
 
 # screeps-cartographer
 
-Cartographer is an advanced (and open source) movement library for Screeps
+[Cartographer](https://github.com/glitchassassin/screeps-cartographer/) is an advanced (and open source) movement library for Screeps.
+
+## Features
+
+- Flexible caching of paths in heap, Memory, or (eventually) segments
+- Path to the closest of multiple targets
+- Fully configurable to fit your needs
+- Can trigger repathing when creeps are stuck
+
+## Roadmap
+
+- [x] Replacement for stock moveTo with configurable caching and full PathFinder options
+- [ ] Point-of-interest path caching for remotes & local economy movement
+- [ ] Traffic management with creep prioritization & shoving
+- [ ] Long-distance travel with better paths than Game.map.findRoute yields
 
 ## Using Cartographer
 
-For an example, see `src/test.ts`.
+For an example, see `src/tests/index.ts`.
 
 ### Setup
 
