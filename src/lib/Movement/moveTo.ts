@@ -140,7 +140,7 @@ export const moveTo = (
     cache,
     visualizePathStyle: opts?.visualizePathStyle
   });
-  if (result === ERR_NO_PATH) {
+  if (result === ERR_NOT_FOUND) {
     // creep has fallen off path: repath and try again
     clearCachedPath(creep, cache);
     cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });

@@ -13,12 +13,9 @@ const keys = {
 };
 
 /**
- *
- * @param key A string to look up the cached path later (used by getCachedPath, moveByCachedPath, etc.)
- * @param origin The origin of the path
- * @param destination A
- * @param opts
- * @returns
+ * Generate a path from `origin` to `destination`, based on the passed `opts`. Caches
+ * the path in the configured cache (or MemoryCache by default) with the provided key.
+ * Returns the generated path (or the cached version, if it exists).
  */
 export function cachePath(
   key: string,
@@ -52,11 +49,17 @@ export function cachePath(
   return path;
 }
 
+/**
+ * Gets a cached path for a given key
+ */
 export function getCachedPath(key: string, opts?: { cache?: CachingStrategy }) {
   const cache = opts?.cache ?? MemoryCache;
   return cache.with(PositionListSerializer).get(cachedPathKey(key));
 }
 
+/**
+ * Clears a cached path for a given key
+ */
 export function resetCachedPath(key: string, opts?: { cache?: CachingStrategy }) {
   const cache = opts?.cache ?? MemoryCache;
   cache.delete(cachedPathKey(key));
@@ -67,10 +70,17 @@ export interface MoveByCachedPathOpts {
   cache?: CachingStrategy;
   visualizePathStyle?: PolyStyle;
 }
+
+/**
+ * Moves a creep along a cached path. If `opts.reverse`, moves it backwards.
+ * Returns ERR_NO_PATH if the cached path doesn't exist, and ERR_NOT_FOUND if
+ * the creep is not on the path. In most cases, you'll want to use `moveByPath`
+ * instead; this is used internally by `moveTo`.
+ */
 export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpts) {
   const cache = opts?.cache ?? MemoryCache;
   const path = cache.with(PositionListSerializer).get(cachedPathKey(key));
-  if (!path) return ERR_NOT_FOUND;
+  if (!path) return ERR_NO_PATH;
 
   // check if move is done
   if (
@@ -107,7 +117,7 @@ export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpt
   }
   if (currentIndex === undefined) {
     // Unable to find our location relative to the path
-    return ERR_NO_PATH;
+    return ERR_NOT_FOUND;
   }
 
   // creep is on the path and index is valid
