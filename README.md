@@ -10,6 +10,7 @@
 - Path to the closest of multiple targets
 - Fully configurable to fit your needs
 - Can trigger repathing when creeps are stuck
+- Can cache custom paths for road-building or reuse with Cartographer's `moveByPath`
 
 ## Roadmap
 
