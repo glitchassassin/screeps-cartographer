@@ -7,6 +7,7 @@ export const normalizeTargets = (
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
   keepTargetInRoom = true
 ) => {
+  if (!keepTargetInRoom) console.log('allowing targets outside of room');
   let normalizedTargets: MoveTarget[] = [];
   if (Array.isArray(targets)) {
     if ('pos' in targets[0]) {
