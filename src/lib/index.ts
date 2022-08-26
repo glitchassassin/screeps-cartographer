@@ -47,6 +47,8 @@ export interface MoveOpts extends PathFinderOpts {
 }
 
 export * from './CachingStrategies';
+export * from './Movement/cachedPaths';
+export * from './Movement/moveByPath';
 export * from './Movement/moveTo';
 export * from './Movement/selectors';
 

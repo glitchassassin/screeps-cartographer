@@ -10,11 +10,12 @@
 - Path to the closest of multiple targets
 - Fully configurable to fit your needs
 - Can trigger repathing when creeps are stuck
+- Can cache custom paths for road-building or reuse with Cartographer's `moveByPath`
 
 ## Roadmap
 
 - [x] Replacement for stock moveTo with configurable caching and full PathFinder options
-- [ ] Point-of-interest path caching for remotes & local economy movement
+- [x] Point-of-interest path caching for remotes & local economy movement
 - [ ] Traffic management with creep prioritization & shoving
 - [ ] Long-distance travel with better paths than Game.map.findRoute yields
 
@@ -78,6 +79,47 @@ moveTo(creep, creep.room.storage, { roadCost: 5, plainCost: 1, swampCost: 1 });
 ```
 
 You can find the full list of [extra options here.](https://glitchassassin.github.io/screeps-cartographer/interfaces/MoveOpts.html)
+
+### Using Cached Paths
+
+Instead of calling moveTo each time, you may find it more efficient to save a cached path and reuse it for multiple creeps. One common example would be pathing between storage and remote sources.
+
+```ts
+// create initial path to remote source
+const path1 = cachePath(storage.room.name + source.id + '1', storage.pos, { pos: source.pos, range: 1 });
+const harvestPos = path1[path1.length - 1];
+// create secondary path, avoiding the road, for empty haulers
+cachePath(
+  storage.room.name + source.id + '2',
+  storage.pos,
+  { pos: path1[path1.length - 2], range: 0 }, // rejoin the first path just before the harvester
+  {
+    roadCost: 1,
+    plainCost: 1,
+    swampCost: 1,
+    roomCallback(room) {
+      const cm = new PathFinder.CostMatrix();
+      if (room === harvestPos.roomName) {
+        // harvest pos is not pathable because a creep will be here
+        cm.set(harvestPos.x, harvestPos.y, 255);
+      }
+      for (const pos of path1) {
+        if (pos.roomName === room) cm.set(pos.x, pos.y, 50);
+      }
+      return cm;
+    }
+  }
+);
+
+// build roads
+const path = getCachedPath(storage.room.name + source.id + '1');
+path.forEach(pos => pos.createConstructionSite(STRUCTURE_ROAD));
+
+// move to remote source
+moveByPath(haulerCreep, storage.room.name + source.id + '2');
+// return home from remote source, following path
+moveByPath(haulerCreep, storage.room.name + source.id + '1', { reverse: true });
+```
 
 ## Testing Cartographer
 

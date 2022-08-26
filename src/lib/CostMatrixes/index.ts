@@ -13,11 +13,13 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
     Game.rooms[room]?.find(FIND_CREEPS).forEach(c => cm.set(c.pos.x, c.pos.y, 255));
   }
   if (opts.avoidObstacleStructures || opts.roadCost) {
-    Game.rooms[room]?.find(FIND_MY_CONSTRUCTION_SITES).forEach(s => {
-      if ((OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType)) {
-        cm.set(s.pos.x, s.pos.y, 255);
-      }
-    });
+    if (opts.avoidObstacleStructures) {
+      Game.rooms[room]?.find(FIND_MY_CONSTRUCTION_SITES).forEach(s => {
+        if ((OBSTACLE_OBJECT_TYPES as string[]).includes(s.structureType)) {
+          cm.set(s.pos.x, s.pos.y, 255);
+        }
+      });
+    }
     Game.rooms[room]?.find(FIND_STRUCTURES).forEach(s => {
       if (opts.avoidObstacleStructures) {
         if (

@@ -1,19 +1,13 @@
 import { MoveOpts, MoveTarget } from 'lib';
-import {
-  CachingStrategies,
-  CachingStrategy,
-  GenericCachingStrategy,
-  MoveTargetListSerializer
-} from 'lib/CachingStrategies';
+import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer } from 'lib/CachingStrategies';
 import { JsonSerializer } from 'lib/CachingStrategies/Serializers/Json';
-import { PositionListSerializer } from 'lib/CachingStrategies/Serializers/RoomPosition';
-import { mutateCostMatrix } from 'lib/CostMatrixes';
 import { creepKey } from 'lib/Keys/Creep';
 import { logCpu, logCpuStart } from 'utils/logCpu';
-import { Coord } from 'utils/packrat';
 // import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
+import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';
+import { normalizeTargets } from './selectors';
 
 const DEBUG = false;
 
@@ -44,7 +38,7 @@ const optCacheFields: (keyof MoveOpts)[] = [
  * Clears all data for a cached path (useful to force a repath)
  */
 export function clearCachedPath(creep: Creep, cache: GenericCachingStrategy<any> = CachingStrategies.HeapCache) {
-  cache.delete(creepKey(creep, keys.CACHED_PATH));
+  resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
   cache.delete(creepKey(creep, keys.CACHED_PATH_TARGETS));
   cache.delete(creepKey(creep, keys.CACHED_PATH_OPTS));
 }
@@ -76,23 +70,7 @@ export const moveTo = (
   const cache = opts?.cache ?? CachingStrategies.HeapCache;
 
   // convert target from whatever format to MoveTarget[]
-  let normalizedTargets: MoveTarget[] = [];
-  if (Array.isArray(targets)) {
-    if ('pos' in targets[0]) {
-      normalizedTargets.push(...(targets as MoveTarget[]));
-    } else {
-      normalizedTargets.push(...(targets as RoomPosition[]).map(pos => ({ pos, range: 1 })));
-    }
-  } else if ('pos' in targets) {
-    if ('range' in targets) {
-      normalizedTargets.push(targets);
-    } else {
-      normalizedTargets.push({ pos: targets.pos, range: 1 });
-    }
-  } else {
-    normalizedTargets.push({ pos: targets, range: 1 });
-  }
-  if (actualOpts.keepTargetInRoom) normalizedTargets = normalizedTargets.flatMap(fixEdgePosition);
+  let normalizedTargets: MoveTarget[] = normalizeTargets(targets, actualOpts.keepTargetInRoom);
 
   if (DEBUG) logCpu('normalizing targets');
 
@@ -129,7 +107,7 @@ export const moveTo = (
   // If creep is stuck, we need to repath
   if (
     actualOpts.repathIfStuck &&
-    cache.get(creepKey(creep, keys.CACHED_PATH)) &&
+    getCachedPath(creepKey(creep, keys.CACHED_PATH), { cache }) &&
     creepIsStuck(creep, actualOpts.repathIfStuck)
   ) {
     clearCachedPath(creep, cache);
@@ -139,110 +117,40 @@ export const moveTo = (
     };
   }
 
-  if (DEBUG) logCpu('checking if creep is stuck');
-
-  // Check if matching cached path exists
-  let cachedPath = cache.with(PositionListSerializer).get(creepKey(creep, keys.CACHED_PATH));
-
-  if (DEBUG) logCpu('fetching cached path');
-
-  // if not, generate a new one
-  if (!cachedPath) {
-    cachedPath = generateAndCachePath(creep, normalizedTargets, actualOpts, cache);
-    if (cachedPath && !(Array.isArray(targets) || 'range' in targets)) {
-      // targets is a RoomPosition or _HasRoomPosition; add the last step back to the path
-      const lastStep = 'pos' in targets ? targets.pos : targets;
-      cachedPath.push(lastStep);
-    }
-    if (DEBUG) logCpu('generating path');
-  }
-
-  if (!cachedPath) return ERR_NO_PATH;
-
-  // remove steps up to the creep's current position and recache with same expiration
-  const creepIndex = cachedPath.findIndex(pos => pos.isEqualTo(creep.pos));
-  cachedPath.splice(0, creepIndex + 1);
-  const key = creepKey(creep, keys.CACHED_PATH);
-  cache.set(key, cache.get(key).slice(2 * (creepIndex + 1)), cache.expires(key));
-  if (DEBUG) logCpu('truncating path');
-
-  // visualize path
-  if (actualOpts.visualizePathStyle) {
-    const style = {
-      ...config.DEFAULT_VISUALIZE_OPTS,
-      ...actualOpts.visualizePathStyle
-    };
-    creep.room.visual.poly(cachedPath, style);
-    if (DEBUG) logCpu('visualizing path');
-  }
-
-  const result = creep.move(creep.pos.getDirectionTo(cachedPath![0]));
-  if (DEBUG) logCpu('moving along path');
-
-  return result;
-};
-
-function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
-  if (pos.x > range && 49 - pos.x > range && pos.y > range && 49 - pos.y > range) {
-    return [{ pos, range }]; // no action needed
-  }
-  // generate quadrants
-  const rect = {
-    x1: Math.max(1, pos.x - range),
-    x2: Math.min(48, pos.x + range),
-    y1: Math.max(1, pos.y - range),
-    y2: Math.min(48, pos.y + range)
-  };
-  const quadrantRange = Math.ceil((Math.min(rect.x2 - rect.x1, rect.y2 - rect.y1) - 1) / 2);
-  const quadrants = [
-    { x: rect.x1 + quadrantRange, y: rect.y1 + quadrantRange },
-    { x: rect.x1 + quadrantRange, y: rect.y2 - quadrantRange },
-    { x: rect.x2 - quadrantRange, y: rect.y2 - quadrantRange },
-    { x: rect.x2 - quadrantRange, y: rect.y1 + quadrantRange }
-  ]
-    .reduce((set, coord) => {
-      if (!set.some(c => c.x === coord.x && c.y === coord.y)) set.push(coord);
-      return set;
-    }, [] as Coord[])
-    .map(coord => ({ pos: new RoomPosition(coord.x, coord.y, pos.roomName), range: quadrantRange }));
-
-  return quadrants;
-}
-
-function generateAndCachePath(
-  creep: Creep,
-  targets: MoveTarget[],
-  opts: MoveOpts,
-  cache: CachingStrategy
-): RoomPosition[] | undefined {
-  // generate path
-  const result = PathFinder.search(creep.pos, targets, {
-    ...opts,
-    roomCallback(room) {
-      let cm = opts.roomCallback?.(room);
-      if (cm === false) return cm;
-      cm = new PathFinder.CostMatrix();
-      return mutateCostMatrix(cm.clone(), room, {
-        avoidCreeps: opts.avoidCreeps,
-        avoidObstacleStructures: opts.avoidObstacleStructures,
-        roadCost: opts.roadCost
-      });
-    }
-  });
-  if (!result.path.length) return undefined;
-
-  // path generation successful - cache results
-  const expiration = opts.reusePath ? Game.time + opts.reusePath + 1 : undefined;
-  cache.with(PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result.path, expiration);
-  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), targets, expiration);
+  // cache opts
+  const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;
+  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), normalizedTargets, expiration);
   cache.with(JsonSerializer).set(
     creepKey(creep, keys.CACHED_PATH_OPTS),
     optCacheFields.reduce((sum, f) => {
-      sum[f] = opts[f] as any;
+      sum[f] = actualOpts[f] as any;
       return sum;
     }, {} as MoveOpts),
     expiration
   );
 
-  return result.path;
-}
+  if (DEBUG) logCpu('checking if creep is stuck');
+
+  // generate cached path, if needed
+  const path = cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
+
+  if (DEBUG) logCpu('generating cached path');
+  // move by path
+  let result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
+    cache,
+    visualizePathStyle: opts?.visualizePathStyle
+  });
+  if (result === ERR_NOT_FOUND) {
+    // creep has fallen off path: repath and try again
+    clearCachedPath(creep, cache);
+    cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
+    result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
+      cache,
+      visualizePathStyle: opts?.visualizePathStyle
+    });
+  }
+
+  if (DEBUG) logCpu('moving by path');
+
+  return result;
+};
