@@ -48,6 +48,7 @@ export interface MoveOpts extends PathFinderOpts {
 
 export * from './CachingStrategies';
 export * from './Movement/moveTo';
+export * from './Movement/poi';
 export * from './Movement/selectors';
 
 export function preTick() {

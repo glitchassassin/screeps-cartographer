@@ -7,13 +7,13 @@ import {
 } from 'lib/CachingStrategies';
 import { JsonSerializer } from 'lib/CachingStrategies/Serializers/Json';
 import { PositionListSerializer } from 'lib/CachingStrategies/Serializers/RoomPosition';
-import { mutateCostMatrix } from 'lib/CostMatrixes';
 import { creepKey } from 'lib/Keys/Creep';
 import { logCpu, logCpuStart } from 'utils/logCpu';
-import { Coord } from 'utils/packrat';
 // import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
 import { creepIsStuck } from './creepIsStuck';
+import { generatePath } from './generatePath';
+import { normalizeTargets } from './selectors';
 
 const DEBUG = false;
 
@@ -76,23 +76,7 @@ export const moveTo = (
   const cache = opts?.cache ?? CachingStrategies.HeapCache;
 
   // convert target from whatever format to MoveTarget[]
-  let normalizedTargets: MoveTarget[] = [];
-  if (Array.isArray(targets)) {
-    if ('pos' in targets[0]) {
-      normalizedTargets.push(...(targets as MoveTarget[]));
-    } else {
-      normalizedTargets.push(...(targets as RoomPosition[]).map(pos => ({ pos, range: 1 })));
-    }
-  } else if ('pos' in targets) {
-    if ('range' in targets) {
-      normalizedTargets.push(targets);
-    } else {
-      normalizedTargets.push({ pos: targets.pos, range: 1 });
-    }
-  } else {
-    normalizedTargets.push({ pos: targets, range: 1 });
-  }
-  if (actualOpts.keepTargetInRoom) normalizedTargets = normalizedTargets.flatMap(fixEdgePosition);
+  let normalizedTargets: MoveTarget[] = normalizeTargets(targets);
 
   if (DEBUG) logCpu('normalizing targets');
 
@@ -182,33 +166,6 @@ export const moveTo = (
   return result;
 };
 
-function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
-  if (pos.x > range && 49 - pos.x > range && pos.y > range && 49 - pos.y > range) {
-    return [{ pos, range }]; // no action needed
-  }
-  // generate quadrants
-  const rect = {
-    x1: Math.max(1, pos.x - range),
-    x2: Math.min(48, pos.x + range),
-    y1: Math.max(1, pos.y - range),
-    y2: Math.min(48, pos.y + range)
-  };
-  const quadrantRange = Math.ceil((Math.min(rect.x2 - rect.x1, rect.y2 - rect.y1) - 1) / 2);
-  const quadrants = [
-    { x: rect.x1 + quadrantRange, y: rect.y1 + quadrantRange },
-    { x: rect.x1 + quadrantRange, y: rect.y2 - quadrantRange },
-    { x: rect.x2 - quadrantRange, y: rect.y2 - quadrantRange },
-    { x: rect.x2 - quadrantRange, y: rect.y1 + quadrantRange }
-  ]
-    .reduce((set, coord) => {
-      if (!set.some(c => c.x === coord.x && c.y === coord.y)) set.push(coord);
-      return set;
-    }, [] as Coord[])
-    .map(coord => ({ pos: new RoomPosition(coord.x, coord.y, pos.roomName), range: quadrantRange }));
-
-  return quadrants;
-}
-
 function generateAndCachePath(
   creep: Creep,
   targets: MoveTarget[],
@@ -216,24 +173,12 @@ function generateAndCachePath(
   cache: CachingStrategy
 ): RoomPosition[] | undefined {
   // generate path
-  const result = PathFinder.search(creep.pos, targets, {
-    ...opts,
-    roomCallback(room) {
-      let cm = opts.roomCallback?.(room);
-      if (cm === false) return cm;
-      cm = new PathFinder.CostMatrix();
-      return mutateCostMatrix(cm.clone(), room, {
-        avoidCreeps: opts.avoidCreeps,
-        avoidObstacleStructures: opts.avoidObstacleStructures,
-        roadCost: opts.roadCost
-      });
-    }
-  });
-  if (!result.path.length) return undefined;
+  const result = generatePath(creep.pos, targets, opts);
+  if (!result) return undefined;
 
   // path generation successful - cache results
   const expiration = opts.reusePath ? Game.time + opts.reusePath + 1 : undefined;
-  cache.with(PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result.path, expiration);
+  cache.with(PositionListSerializer).set(creepKey(creep, keys.CACHED_PATH), result, expiration);
   cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), targets, expiration);
   cache.with(JsonSerializer).set(
     creepKey(creep, keys.CACHED_PATH_OPTS),
@@ -244,5 +189,5 @@ function generateAndCachePath(
     expiration
   );
 
-  return result.path;
+  return result;
 }

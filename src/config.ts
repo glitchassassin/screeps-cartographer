@@ -17,6 +17,10 @@ export const config = {
     strokeWidth: 0.15,
     opacity: 0.1
   } as PolyStyle,
+  DEFAULT_POI_OPTS: {
+    extraRoutes: 1,
+    avoidObstacleStructures: true
+  },
   MEMORY_CACHE_PATH: '_cg',
   MEMORY_CACHE_EXPIRATION_PATH: '_cge'
 };
