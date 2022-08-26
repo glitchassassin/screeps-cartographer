@@ -2,6 +2,11 @@ import { cachePath, CachingStrategies, followPath, getCachedPath, resetCachedPat
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 
+/**
+ * This test simulates creating two paths to a destination, one for a road
+ * and one for haulers to travel off road (when empty, fatigue doesn't matter,
+ * and terrain is irrelevant)
+ */
 export class TestCachedPaths extends CartographerTestCase {
   _creeps = {
     c1: ''
@@ -21,6 +26,9 @@ export class TestCachedPaths extends CartographerTestCase {
       { pos: path1[path1.length - 1], range: 0 },
       {
         cache: CachingStrategies.HeapCache,
+        roadCost: 1,
+        plainCost: 1,
+        swampCost: 1,
         roomCallback(room) {
           const cm = new PathFinder.CostMatrix();
           for (const pos of path1) {
