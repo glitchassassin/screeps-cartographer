@@ -1,4 +1,5 @@
-import { preTick } from 'lib';
+import { preTick, reconcileTraffic } from 'lib';
+import { profile, profileReport } from 'utils/profiler';
 import { scout } from './roles/scout';
 import { worker } from './roles/worker';
 import { runTestCases } from './testCases';
@@ -18,8 +19,11 @@ export const runTestScenarios = () => {
     if (!creep.spawning && creep.memory.role) roles[creep.memory.role](creep);
   }
   runTestCases();
+
+  profile('reconcileTraffic', () => reconcileTraffic());
+
   visualizeIntel();
-  // profileReport();
+  profileReport();
 };
 
 declare global {

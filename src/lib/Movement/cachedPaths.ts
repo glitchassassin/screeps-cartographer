@@ -5,6 +5,7 @@ import { HeapCache } from 'lib/CachingStrategies/Heap';
 import { MemoryCache } from 'lib/CachingStrategies/Memory';
 import { creepKey } from 'lib/Keys/Creep';
 import { generatePath } from './generatePath';
+import { move } from './move';
 import { normalizeTargets } from './selectors';
 
 const cachedPathKey = (key: string) => `_poi_${key}`;
@@ -65,10 +66,8 @@ export function resetCachedPath(key: string, opts?: { cache?: CachingStrategy })
   cache.delete(cachedPathKey(key));
 }
 
-export interface MoveByCachedPathOpts {
+export interface MoveByCachedPathOpts extends MoveOpts {
   reverse?: boolean;
-  cache?: CachingStrategy;
-  visualizePathStyle?: PolyStyle;
 }
 
 /**
@@ -133,7 +132,7 @@ export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpt
     creep.room.visual.poly(pathSegment, style);
   }
 
-  const result = creep.move(creep.pos.getDirectionTo(path[nextIndex]));
+  const result = move(creep, [path[nextIndex]], opts?.priority);
 
   return result;
 }

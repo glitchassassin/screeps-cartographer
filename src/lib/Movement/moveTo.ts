@@ -7,7 +7,8 @@ import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
 import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';
-import { normalizeTargets } from './selectors';
+import { move } from './move';
+import { calculateAdjacentPositions, normalizeTargets } from './selectors';
 
 const DEBUG = false;
 
@@ -88,8 +89,20 @@ export const moveTo = (
     // check if movement is complete
     if (!needToFlee && pos.inRangeTo(creep.pos, range) && creep.pos.roomName === pos.roomName) {
       if (!opts?.flee) {
+        // no need to move, path complete
         clearCachedPath(creep, cache);
-        return OK; // no need to move, path complete
+        // register move intent to stay here or in an adjacent viable position
+        move(
+          creep,
+          [
+            creep.pos,
+            ...calculateAdjacentPositions(creep.pos).filter(p =>
+              normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
+            )
+          ],
+          actualOpts.priority
+        );
+        return OK;
       } else {
         needToFlee = true; // need to move, still in range of flee targets
       }
@@ -137,16 +150,18 @@ export const moveTo = (
   if (DEBUG) logCpu('generating cached path');
   // move by path
   let result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
-    cache,
-    visualizePathStyle: opts?.visualizePathStyle
+    ...actualOpts,
+    reverse: false,
+    cache
   });
   if (result === ERR_NOT_FOUND) {
     // creep has fallen off path: repath and try again
     clearCachedPath(creep, cache);
     cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
     result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
-      cache,
-      visualizePathStyle: opts?.visualizePathStyle
+      ...actualOpts,
+      reverse: false,
+      cache
     });
   }
 

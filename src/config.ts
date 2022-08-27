@@ -8,7 +8,8 @@ export const config = {
     repathIfStuck: 3,
     roadCost: 1,
     plainCost: 2,
-    swampCost: 10
+    swampCost: 10,
+    priority: 1
   } as MoveOpts,
   DEFAULT_VISUALIZE_OPTS: {
     fill: 'transparent',

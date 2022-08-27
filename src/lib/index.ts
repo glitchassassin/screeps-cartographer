@@ -44,6 +44,10 @@ export interface MoveOpts extends PathFinderOpts {
    * Cost for walking on swamp positions. The default is 10.
    */
   swampCost?: number;
+  /**
+   * Movement priority (higher-value moves override lower-value moves). The default is 1.
+   */
+  priority?: number;
 }
 
 export * from './CachingStrategies';
@@ -51,6 +55,7 @@ export * from './Movement/cachedPaths';
 export * from './Movement/moveByPath';
 export * from './Movement/moveTo';
 export * from './Movement/selectors';
+export * from './TrafficManager/reconcileTraffic';
 
 export function preTick() {
   cleanAllCaches();
