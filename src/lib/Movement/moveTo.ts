@@ -8,7 +8,7 @@ import { config } from '../../config';
 import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';
 import { move } from './move';
-import { calculateAdjacentPositions, normalizeTargets } from './selectors';
+import { adjacentWalkablePositions, normalizeTargets } from './selectors';
 
 const DEBUG = false;
 
@@ -96,7 +96,7 @@ export const moveTo = (
           creep,
           [
             creep.pos,
-            ...calculateAdjacentPositions(creep.pos).filter(p =>
+            ...adjacentWalkablePositions(creep.pos, true).filter(p =>
               normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
             )
           ],

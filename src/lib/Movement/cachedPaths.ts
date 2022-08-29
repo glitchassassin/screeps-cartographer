@@ -33,6 +33,22 @@ export function cachePath(
 
   const normalizedTargets = normalizeTargets(targets, opts?.keepTargetInRoom);
 
+  if (opts?.visualizePathStyle) {
+    const style = {
+      ...config.DEFAULT_VISUALIZE_OPTS,
+      ...opts.visualizePathStyle
+    };
+    for (const t of normalizedTargets) {
+      new RoomVisual(t.pos.roomName).rect(
+        t.pos.x - t.range - 0.5,
+        t.pos.y - t.range - 0.5,
+        t.range * 2 + 1,
+        t.range * 2 + 1,
+        style
+      );
+    }
+  }
+
   // check if cached POI already exists
   const cached = cache.with(PositionListSerializer).get(cachedPathKey(key));
   if (cached) {

@@ -43,23 +43,20 @@ export const worker = {
       const source = Game.getObjectById(creep.memory.harvestSource);
       if (!source) return;
 
-      if (creep.harvest(source) === ERR_NOT_IN_RANGE) {
-        if (creep.memory.useCartographer) {
-          profile('cg_perf', () =>
-            moveTo(creep, source, { avoidCreeps: true, visualizePathStyle: { stroke: 'cyan' } })
-          );
-        } else {
-          profile('mt_perf', () => creep.moveTo(source, { visualizePathStyle: { stroke: 'magenta' } }));
-        }
+      if (creep.memory.useCartographer) {
+        profile('cg_perf', () => moveTo(creep, source, { visualizePathStyle: { stroke: 'cyan' } }));
       } else {
-        if (creep.store.getFreeCapacity() === 0) {
-          delete creep.memory.harvestSource;
-          const ttd = Game.rooms[creep.memory.room].controller?.ticksToDowngrade;
-          if (ttd && ttd < 3000) {
-            creep.memory.state = 'UPGRADE';
-          } else {
-            creep.memory.state = 'DEPOSIT';
-          }
+        profile('mt_perf', () => creep.moveTo(source, { visualizePathStyle: { stroke: 'magenta' } }));
+      }
+      creep.harvest(source);
+
+      if (creep.store.getFreeCapacity() === 0) {
+        delete creep.memory.harvestSource;
+        const ttd = Game.rooms[creep.memory.room].controller?.ticksToDowngrade;
+        if (ttd && ttd < 3000) {
+          creep.memory.state = 'UPGRADE';
+        } else {
+          creep.memory.state = 'DEPOSIT';
         }
       }
     }
@@ -70,18 +67,16 @@ export const worker = {
         creep.memory.state = 'DEPOSIT';
         return;
       }
-      if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
-        if (creep.memory.useCartographer) {
-          profile('cg_perf', () =>
-            moveTo(creep, controller, { avoidCreeps: true, visualizePathStyle: { stroke: 'cyan' } })
-          );
-        } else {
-          profile('mt_perf', () => creep.moveTo(controller, { visualizePathStyle: { stroke: 'magenta' } }));
-        }
+      if (creep.memory.useCartographer) {
+        profile('cg_perf', () =>
+          moveTo(creep, { pos: controller.pos, range: 3 }, { visualizePathStyle: { stroke: 'cyan' } })
+        );
       } else {
-        if (creep.store.getUsedCapacity() === 0) {
-          creep.memory.state = 'HARVEST';
-        }
+        profile('mt_perf', () => creep.moveTo(controller, { range: 3, visualizePathStyle: { stroke: 'magenta' } }));
+      }
+      creep.upgradeController(controller);
+      if (creep.store.getUsedCapacity() === 0) {
+        creep.memory.state = 'HARVEST';
       }
     }
 
@@ -91,16 +86,14 @@ export const worker = {
         creep.memory.state = 'UPGRADE';
         return;
       }
-      if (creep.transfer(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-        if (creep.memory.useCartographer) {
-          profile('cg_perf', () => moveTo(creep, spawn, { avoidCreeps: true, visualizePathStyle: { stroke: 'cyan' } }));
-        } else {
-          profile('mt_perf', () => creep.moveTo(spawn, { visualizePathStyle: { stroke: 'magenta' } }));
-        }
+      if (creep.memory.useCartographer) {
+        profile('cg_perf', () => moveTo(creep, spawn, { visualizePathStyle: { stroke: 'cyan' } }));
       } else {
-        if (creep.store.getUsedCapacity() === 0) {
-          creep.memory.state = 'HARVEST';
-        }
+        profile('mt_perf', () => creep.moveTo(spawn, { visualizePathStyle: { stroke: 'magenta' } }));
+      }
+      creep.transfer(spawn, RESOURCE_ENERGY);
+      if (creep.store.getUsedCapacity() === 0) {
+        creep.memory.state = 'HARVEST';
       }
     }
   }

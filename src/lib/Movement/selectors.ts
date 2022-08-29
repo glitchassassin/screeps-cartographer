@@ -79,3 +79,45 @@ export const calculateNearbyPositions = (pos: RoomPosition, proximity: number, i
   if (includeCenter) adjacent.push(pos);
   return adjacent;
 };
+
+export const adjacentWalkablePositions = (pos: RoomPosition, ignoreCreeps = false) =>
+  calculateAdjacentPositions(pos).filter(p => isPositionWalkable(p, ignoreCreeps));
+
+export const isPositionWalkable = (
+  pos: RoomPosition,
+  ignoreCreeps: boolean = false,
+  ignoreStructures: boolean = false
+) => {
+  let terrain;
+  try {
+    terrain = Game.map.getRoomTerrain(pos.roomName);
+  } catch {
+    // Invalid room
+    return false;
+  }
+  if (terrain.get(pos.x, pos.y) === TERRAIN_MASK_WALL) {
+    return false;
+  }
+  if (
+    Game.rooms[pos.roomName] &&
+    pos.look().some(obj => {
+      if (!ignoreCreeps && obj.type === LOOK_CREEPS) return true;
+      if (
+        !ignoreStructures &&
+        obj.constructionSite &&
+        (OBSTACLE_OBJECT_TYPES as string[]).includes(obj.constructionSite.structureType)
+      )
+        return true;
+      if (
+        !ignoreStructures &&
+        obj.structure &&
+        (OBSTACLE_OBJECT_TYPES as string[]).includes(obj.structure.structureType)
+      )
+        return true;
+      return false;
+    })
+  ) {
+    return false;
+  }
+  return true;
+};

@@ -4,6 +4,7 @@ import { TestCachedPaths } from './TestCachedPaths';
 import { TestFlee } from './TestFlee';
 import { TestPriority } from './TestPriority';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
+import { TestShove } from './TestShove';
 import { TestStuck } from './TestStuck';
 
 export const testCases = [
@@ -11,7 +12,8 @@ export const testCases = [
   new TestFlee(),
   new TestStuck(),
   new TestCachedPaths(),
-  new TestPriority()
+  new TestPriority(),
+  new TestShove()
 ];
 const testResults = new Map<CartographerTestCase, TestResult>();
 let reported = false;

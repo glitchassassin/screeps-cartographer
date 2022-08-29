@@ -1,5 +1,5 @@
 import { preTick, reconcileTraffic } from 'lib';
-import { profile, profileReport } from 'utils/profiler';
+import { profile } from 'utils/profiler';
 import { scout } from './roles/scout';
 import { worker } from './roles/worker';
 import { runTestCases } from './testCases';
@@ -23,7 +23,7 @@ export const runTestScenarios = () => {
   profile('reconcileTraffic', () => reconcileTraffic());
 
   visualizeIntel();
-  profileReport();
+  // profileReport();
 };
 
 declare global {
