@@ -9,7 +9,8 @@ interface MoveIntent {
 const generateIndexes = () => ({
   creep: new Map<Creep, MoveIntent>(),
   priority: new Map<number, Map<number, Map<Creep, MoveIntent>>>(),
-  targets: new Map<string, Map<Creep, MoveIntent>>()
+  targets: new Map<string, Map<Creep, MoveIntent>>(),
+  pullers: new Set<Creep>()
 });
 let _indexes = generateIndexes();
 let tick = 0;
@@ -22,10 +23,18 @@ export function getMoveIntents() {
   return _indexes;
 }
 
+export function registerPull(puller: Creep) {
+  const intents = getMoveIntents();
+  intents.pullers.add(puller);
+}
+
 /**
  * Index intent for future reference
  */
-export function registerMove(intent: MoveIntent) {
+export function registerMove(intent: MoveIntent, pulled = false) {
+  if (intent.creep.fatigue && !pulled) {
+    intent.targets = [intent.creep.pos];
+  }
   const indexes = getMoveIntents();
   indexes.creep.set(intent.creep, intent);
   const byPriority = indexes.priority.get(intent.priority) ?? new Map();

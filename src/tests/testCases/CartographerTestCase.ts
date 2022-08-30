@@ -14,6 +14,12 @@ export abstract class CartographerTestCase {
     return `[${this.constructor.name}:${this.retries}]`;
   }
 
+  testRegion: { w: number; h: number } = {
+    w: 0,
+    h: 0
+  };
+  testRegionOrigin: RoomPosition | undefined = undefined;
+
   // spawn lookup
   _spawn: Id<StructureSpawn>;
   get spawn() {
@@ -35,6 +41,7 @@ export abstract class CartographerTestCase {
 
   // boilerplate
   run(): TestResult {
+    this.visualize();
     let setupResult = this.setup();
     if (setupResult !== TestResult.PASS) return setupResult;
     this.started ??= Game.time;
@@ -96,5 +103,20 @@ export abstract class CartographerTestCase {
   reset() {
     this.cleanup();
     this.retries -= 1;
+  }
+  visualize() {
+    if (!this.testRegionOrigin || this.testRegion.w === 0 || this.testRegion.h === 0) return;
+    this.spawn.room.visual
+      .rect(this.testRegionOrigin.x - 0.5, this.testRegionOrigin.y - 0.5, this.testRegion.w, this.testRegion.h, {
+        stroke: 'cyan',
+        fill: 'transparent',
+        opacity: 0.3
+      })
+      .text(this.constructor.name, this.testRegionOrigin.x - 0.4, this.testRegionOrigin.y - 0.7, {
+        color: 'cyan',
+        opacity: 0.3,
+        align: 'left',
+        font: 0.3
+      });
   }
 }

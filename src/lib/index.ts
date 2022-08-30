@@ -54,6 +54,7 @@ export * from './CachingStrategies';
 export * from './Movement/cachedPaths';
 export * from './Movement/moveByPath';
 export * from './Movement/moveTo';
+export * from './Movement/pull';
 export * from './Movement/selectors';
 export * from './TrafficManager/reconcileTraffic';
 

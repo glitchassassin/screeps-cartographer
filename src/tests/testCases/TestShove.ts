@@ -8,15 +8,32 @@ export class TestShove extends CartographerTestCase {
     c2: ''
   };
   timeout = 50; // ticks
+  testRegion = {
+    w: 2,
+    h: 2
+  };
   targetPos1: RoomPosition | undefined;
   targetPos2: RoomPosition | undefined;
   targetPos3: RoomPosition | undefined;
   phase = 0;
   retries = 0;
   test() {
-    this.targetPos1 ??= new RoomPosition(this.spawn.pos.x - 2, this.spawn.pos.y + 3, this.spawn.pos.roomName);
-    this.targetPos2 ??= new RoomPosition(this.spawn.pos.x - 3, this.spawn.pos.y + 3, this.spawn.pos.roomName);
-    this.targetPos3 ??= new RoomPosition(this.spawn.pos.x - 3, this.spawn.pos.y + 2, this.spawn.pos.roomName);
+    if (!this.testRegionOrigin) return TestResult.PENDING;
+    this.targetPos1 ??= new RoomPosition(
+      this.testRegionOrigin.x,
+      this.testRegionOrigin.y,
+      this.testRegionOrigin.roomName
+    );
+    this.targetPos2 ??= new RoomPosition(
+      this.testRegionOrigin.x + 1,
+      this.testRegionOrigin.y,
+      this.testRegionOrigin.roomName
+    );
+    this.targetPos3 ??= new RoomPosition(
+      this.testRegionOrigin.x + 1,
+      this.testRegionOrigin.y + 1,
+      this.testRegionOrigin.roomName
+    );
     if (this.phase === 0) {
       if (this.creeps.c1.pos.isEqualTo(this.targetPos1) && this.creeps.c2.pos.isEqualTo(this.targetPos2))
         this.phase += 1;

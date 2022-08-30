@@ -36,6 +36,19 @@ export function reconcileTraffic() {
     });
   }
 
+  // remove pullers as move targets
+  for (const puller of moveIntents.pullers) {
+    const posKey = packPos(puller.pos);
+    for (const intent of moveIntents.targets.get(posKey)?.values() ?? []) {
+      if (intent.creep === puller) continue;
+      const oldCount = intent.targets.length;
+      const index = intent.targets.findIndex(p => puller.pos.isEqualTo(p));
+      if (index !== -1) intent.targets.splice(index, 1);
+      // update priority/count index
+      updateIntentTargetCount(intent, oldCount);
+    }
+  }
+
   // Set move intents for shove targets
   for (const posKey of moveIntents.targets.keys()) {
     const pos = unpackPos(posKey);
