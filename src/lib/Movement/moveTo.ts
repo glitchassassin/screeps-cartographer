@@ -77,7 +77,12 @@ export const moveTo = (
 
   // if relevant opts have changed, clear cached path
   const cachedOpts = cache.with(JsonSerializer).get(creepKey(creep, keys.CACHED_PATH_OPTS));
-  if (!cachedOpts || optCacheFields.some(f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f])) {
+  if (
+    !cachedOpts ||
+    optCacheFields.some(
+      f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f] && fallbackOpts[f as keyof MoveOpts] !== cachedOpts[f]
+    )
+  ) {
     clearCachedPath(creep, cache);
   }
 
