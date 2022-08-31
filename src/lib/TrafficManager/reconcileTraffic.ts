@@ -4,10 +4,16 @@ import { adjacentWalkablePositions } from 'lib/Movement/selectors';
 import { packPos, unpackPos } from 'utils/packrat';
 import { getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
 
+const DEBUG = false;
+
 const keys = {
   RECONCILE_TRAFFIC_RAN: '_crr'
 };
 
+/**
+ * Checks if the reconcile function has run recently. If not, creeps will
+ * fall back to unmanaged movement to preserve some functionality.
+ */
 export function reconciledRecently() {
   const lastReconciled = MemoryCache.with(NumberSerializer).get(keys.RECONCILE_TRAFFIC_RAN);
   return Boolean(lastReconciled && Game.time - 2 <= lastReconciled);
@@ -26,14 +32,16 @@ export function reconcileTraffic() {
   const moveIntents = getMoveIntents();
 
   // visualize
-  for (const { creep, targets, priority } of moveIntents.creep.values()) {
-    targets.forEach(t => {
-      if (t.isEqualTo(creep.pos)) {
-        creep.room.visual.circle(creep.pos, { radius: 0.5, stroke: 'orange', fill: 'transparent' });
-      } else {
-        creep.room.visual.line(creep.pos, t, { color: 'orange' });
-      }
-    });
+  if (DEBUG) {
+    for (const { creep, targets, priority } of moveIntents.creep.values()) {
+      targets.forEach(t => {
+        if (t.isEqualTo(creep.pos)) {
+          creep.room.visual.circle(creep.pos, { radius: 0.5, stroke: 'orange', fill: 'transparent' });
+        } else {
+          creep.room.visual.line(creep.pos, t, { color: 'orange' });
+        }
+      });
+    }
   }
 
   // remove pullers as move targets
@@ -52,7 +60,9 @@ export function reconcileTraffic() {
   // Set move intents for shove targets
   for (const posKey of moveIntents.targets.keys()) {
     const pos = unpackPos(posKey);
-    Game.rooms[pos.roomName]?.visual.text(moveIntents.targets.get(posKey)?.size.toString() ?? '0', pos);
+
+    if (DEBUG) Game.rooms[pos.roomName]?.visual.text(moveIntents.targets.get(posKey)?.size.toString() ?? '0', pos);
+
     if (!Game.rooms[pos.roomName]) {
       console.log('Out-of-room target', pos, JSON.stringify(moveIntents.targets.get(posKey)));
       continue;
@@ -64,7 +74,8 @@ export function reconcileTraffic() {
         priority: 0,
         targets: [target.creep.pos, ...adjacentWalkablePositions(target.creep.pos, true)]
       });
-      target.creep.room.visual.circle(pos, { radius: 1.5, stroke: 'red', fill: 'transparent ' });
+
+      if (DEBUG) target.creep.room.visual.circle(pos, { radius: 1.5, stroke: 'red', fill: 'transparent ' });
     }
   }
 
@@ -77,18 +88,20 @@ export function reconcileTraffic() {
       if (!intents.size) priority.delete(minPositionCount);
 
       for (const intent of intents.values()) {
-        intent.targets.forEach(t => {
-          if (t.isEqualTo(intent.creep.pos)) {
-            intent.creep.room.visual.circle(intent.creep.pos, {
-              radius: 0.5,
-              stroke: 'yellow',
-              strokeWidth: 0.2,
-              fill: 'transparent'
-            });
-          } else {
-            intent.creep.room.visual.line(intent.creep.pos, t, { color: 'yellow', width: 0.2 });
-          }
-        });
+        if (DEBUG) {
+          intent.targets.forEach(t => {
+            if (t.isEqualTo(intent.creep.pos)) {
+              intent.creep.room.visual.circle(intent.creep.pos, {
+                radius: 0.5,
+                stroke: 'yellow',
+                strokeWidth: 0.2,
+                fill: 'transparent'
+              });
+            } else {
+              intent.creep.room.visual.line(intent.creep.pos, t, { color: 'yellow', width: 0.2 });
+            }
+          });
+        }
         // get the first position with no conflicts, or else the position with
         // fewest conflicts
         let targetPos: RoomPosition | undefined = intent.targets[0];
@@ -99,27 +112,30 @@ export function reconcileTraffic() {
 
         if (!targetPos) {
           // no movement options
-          intent.creep.room.visual
-            .line(
-              intent.creep.pos.x - 0.5,
-              intent.creep.pos.y - 0.5,
-              intent.creep.pos.x + 0.5,
-              intent.creep.pos.y + 0.5,
-              { color: 'red' }
-            )
-            .line(
-              intent.creep.pos.x - 0.5,
-              intent.creep.pos.y + 0.5,
-              intent.creep.pos.x + 0.5,
-              intent.creep.pos.y - 0.5,
-              { color: 'red' }
-            );
+          if (DEBUG) {
+            intent.creep.room.visual
+              .line(
+                intent.creep.pos.x - 0.5,
+                intent.creep.pos.y - 0.5,
+                intent.creep.pos.x + 0.5,
+                intent.creep.pos.y + 0.5,
+                { color: 'red' }
+              )
+              .line(
+                intent.creep.pos.x - 0.5,
+                intent.creep.pos.y + 0.5,
+                intent.creep.pos.x + 0.5,
+                intent.creep.pos.y - 0.5,
+                { color: 'red' }
+              );
+          }
           continue;
         }
 
         // resolve intent
         intent.creep.move(intent.creep.pos.getDirectionTo(targetPos));
-        intent.creep.room.visual.line(intent.creep.pos, targetPos, { color: 'green', width: 0.5 });
+
+        if (DEBUG) intent.creep.room.visual.line(intent.creep.pos, targetPos, { color: 'green', width: 0.5 });
 
         // mark pos as used
         const posKey = packPos(targetPos);

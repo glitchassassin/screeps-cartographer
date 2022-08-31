@@ -15,6 +15,16 @@ const generateIndexes = () => ({
 let _indexes = generateIndexes();
 let tick = 0;
 
+/**
+ * Gets the current tick's move intents, recreating the indexes
+ * if the data is stale from the previous tick
+ *
+ * Returns:
+ *  - creep: Index of intents by creep
+ *  - priority: Index of intents by priority, then by number of viable target squares, then by creep
+ *  - targets: Index of intents by position, then by creep
+ *  - pullers: Index of puller creeps
+ */
 export function getMoveIntents() {
   if (Game.time !== tick) {
     tick = Game.time;
@@ -23,13 +33,17 @@ export function getMoveIntents() {
   return _indexes;
 }
 
+/**
+ * Register a pull intent (used to avoid breaking trains of
+ * pulled creeps)
+ */
 export function registerPull(puller: Creep) {
   const intents = getMoveIntents();
   intents.pullers.add(puller);
 }
 
 /**
- * Index intent for future reference
+ * Register a move intent (adds to a couple indexes for quick lookups)
  */
 export function registerMove(intent: MoveIntent, pulled = false) {
   if (intent.creep.fatigue && !pulled) {
@@ -50,6 +64,9 @@ export function registerMove(intent: MoveIntent, pulled = false) {
   }
 }
 
+/**
+ * Updates an intent's indexes when its target count changes
+ */
 export function updateIntentTargetCount(intent: MoveIntent, oldCount: number) {
   const indexes = getMoveIntents();
   const byPriority = indexes.priority.get(intent.priority) ?? new Map<number, Map<Creep, MoveIntent>>();

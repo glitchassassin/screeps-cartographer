@@ -1,8 +1,15 @@
 import { MoveTarget } from 'lib';
 import { Coord } from 'utils/packrat';
 
+/**
+ * Position is an edge tile
+ */
 export const isExit = (pos: RoomPosition) => pos.x === 0 || pos.y === 0 || pos.x === 49 || pos.y === 49;
 
+/**
+ * Takes a target or list of targets in a few different possible formats and
+ * normalizes to a list of MoveTarget[]
+ */
 export const normalizeTargets = (
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
   keepTargetInRoom = true
@@ -27,6 +34,12 @@ export const normalizeTargets = (
   return normalizedTargets;
 };
 
+/**
+ * If a MoveTarget's position and range overlaps a room edge, this will split
+ * the MoveTarget into two or four MoveTargets to cover an equivalent area without
+ * overlapping the edge. Useful for pathing in range of a target, but making sure it's
+ * at least in the same room.
+ */
 function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
   if (pos.x > range && 49 - pos.x > range && pos.y > range && 49 - pos.y > range) {
     return [{ pos, range }]; // no action needed
@@ -54,6 +67,9 @@ function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
   return quadrants;
 }
 
+/**
+ * Helper for calculating adjacent tiles
+ */
 export const calculateAdjacencyMatrix = (proximity = 1): { x: number; y: number }[] => {
   let adjacencies = new Array(proximity * 2 + 1).fill(0).map((v, i) => i - proximity);
 
@@ -61,10 +77,17 @@ export const calculateAdjacencyMatrix = (proximity = 1): { x: number; y: number 
     .flatMap(x => adjacencies.map(y => ({ x, y })))
     .filter((a: { x: number; y: number }) => !(a.x === 0 && a.y === 0));
 };
+
+/**
+ * Positions in range 1 of `pos` (not includeing `pos`)
+ */
 export const calculateAdjacentPositions = (pos: RoomPosition) => {
   return calculateNearbyPositions(pos, 1);
 };
 
+/**
+ * Positions within `proximity` of `pos`, optionally including `pos`
+ */
 export const calculateNearbyPositions = (pos: RoomPosition, proximity: number, includeCenter = false) => {
   let adjacent: RoomPosition[] = [];
   adjacent = calculateAdjacencyMatrix(proximity)
@@ -80,9 +103,15 @@ export const calculateNearbyPositions = (pos: RoomPosition, proximity: number, i
   return adjacent;
 };
 
+/**
+ * Adjacent positions that are pathable (optionally ignoring creeps)
+ */
 export const adjacentWalkablePositions = (pos: RoomPosition, ignoreCreeps = false) =>
   calculateAdjacentPositions(pos).filter(p => isPositionWalkable(p, ignoreCreeps));
 
+/**
+ * Check if a position is walkable, accounting for terrain, creeps, and structures
+ */
 export const isPositionWalkable = (
   pos: RoomPosition,
   ignoreCreeps: boolean = false,
@@ -105,13 +134,15 @@ export const isPositionWalkable = (
       if (
         !ignoreStructures &&
         obj.constructionSite &&
+        obj.constructionSite.my &&
         (OBSTACLE_OBJECT_TYPES as string[]).includes(obj.constructionSite.structureType)
       )
         return true;
       if (
         !ignoreStructures &&
         obj.structure &&
-        (OBSTACLE_OBJECT_TYPES as string[]).includes(obj.structure.structureType)
+        ((OBSTACLE_OBJECT_TYPES as string[]).includes(obj.structure.structureType) ||
+          (obj.structure instanceof StructureRampart && !obj.structure.my))
       )
         return true;
       return false;
