@@ -1,29 +1,17 @@
 import { moveTo } from 'lib';
-import { profile } from 'utils/profiler';
 
 declare global {
   interface CreepMemory {
     state?: 'HARVEST' | 'UPGRADE' | 'DEPOSIT';
     harvestSource?: Id<Source>;
     room: string;
-    useCartographer?: boolean;
-  }
-  interface Memory {
-    cg_perf: {
-      sum: number;
-      count: number;
-    };
-    mt_perf: {
-      sum: number;
-      count: number;
-    };
   }
 }
 
 export const worker = {
   spawn: (spawn: StructureSpawn) => {
     spawn.spawnCreep([WORK, MOVE, MOVE, CARRY], `${spawn.room.name}_WORKER_${Game.time % 10000}`, {
-      memory: { room: spawn.room.name, role: 'worker', useCartographer: Boolean(Math.round(Math.random())) }
+      memory: { room: spawn.room.name, role: 'worker' }
     });
   },
   run: (creep: Creep) => {
@@ -43,11 +31,7 @@ export const worker = {
       const source = Game.getObjectById(creep.memory.harvestSource);
       if (!source) return;
 
-      if (creep.memory.useCartographer) {
-        profile('cg_perf', () => moveTo(creep, source, { visualizePathStyle: { stroke: 'cyan' } }));
-      } else {
-        profile('mt_perf', () => creep.moveTo(source, { visualizePathStyle: { stroke: 'magenta' } }));
-      }
+      moveTo(creep, source, { visualizePathStyle: { stroke: 'cyan' } });
       creep.harvest(source);
 
       if (creep.store.getFreeCapacity() === 0) {
@@ -67,13 +51,7 @@ export const worker = {
         creep.memory.state = 'DEPOSIT';
         return;
       }
-      if (creep.memory.useCartographer) {
-        profile('cg_perf', () =>
-          moveTo(creep, { pos: controller.pos, range: 3 }, { visualizePathStyle: { stroke: 'cyan' } })
-        );
-      } else {
-        profile('mt_perf', () => creep.moveTo(controller, { range: 3, visualizePathStyle: { stroke: 'magenta' } }));
-      }
+      moveTo(creep, { pos: controller.pos, range: 3 }, { visualizePathStyle: { stroke: 'cyan' } });
       creep.upgradeController(controller);
       if (creep.store.getUsedCapacity() === 0) {
         creep.memory.state = 'HARVEST';
@@ -86,11 +64,7 @@ export const worker = {
         creep.memory.state = 'UPGRADE';
         return;
       }
-      if (creep.memory.useCartographer) {
-        profile('cg_perf', () => moveTo(creep, spawn, { visualizePathStyle: { stroke: 'cyan' } }));
-      } else {
-        profile('mt_perf', () => creep.moveTo(spawn, { visualizePathStyle: { stroke: 'magenta' } }));
-      }
+      moveTo(creep, spawn, { visualizePathStyle: { stroke: 'cyan' } });
       creep.transfer(spawn, RESOURCE_ENERGY);
       if (creep.store.getUsedCapacity() === 0) {
         creep.memory.state = 'HARVEST';
