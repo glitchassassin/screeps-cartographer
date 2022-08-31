@@ -31,6 +31,7 @@
   "author": "LordGreywether",
   "license": "MIT",
   "devDependencies": {
+    "@knodes/typedoc-plugin-pages": "^0.23.1",
     "@types/jest": "^28.1.6",
     "@types/screeps": "^3.3.0",
     "jest": "^28.1.3",

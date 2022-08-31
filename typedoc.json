@@ -1,0 +1,15 @@
+{
+  "pluginPages": {
+    "pages": [
+      {
+        "title": "Implementation Details",
+        "children": [
+          {
+            "title": "Traffic Management",
+            "source": "./trafficManagement.md"
+          }
+        ]
+      }
+    ]
+  }
+}
