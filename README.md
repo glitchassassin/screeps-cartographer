@@ -27,13 +27,14 @@ For an example, see `src/tests/index.ts`.
 
 ### Setup
 
-Call `preTick()` at the beginning of your loop:
+Call `preTick()` at the beginning of your loop, and (to enable traffic management) call `reconcileTraffic()` at the end of it:
 
 ```ts
 import { preTick } from 'screeps-cartographer';
 const loop = () => {
   preTick();
   // your code goes here
+  reconcileTraffic();
 };
 ```
 
