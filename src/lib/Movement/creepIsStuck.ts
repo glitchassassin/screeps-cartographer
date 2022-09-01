@@ -6,6 +6,10 @@ const keys = {
   LAST_POSITION_TIME: '_cst'
 };
 
+/**
+ * Tracks a creep's position and returns true if it has no fatigue
+ * but has not moved in `stuckLimit` ticks
+ */
 export const creepIsStuck = (creep: Creep, stuckLimit: number) => {
   if (creep.fatigue > 0) return false;
 

@@ -11,6 +11,7 @@
 - Fully configurable to fit your needs
 - Can trigger repathing when creeps are stuck
 - Can cache custom paths for road-building or reuse with Cartographer's `moveByPath`
+- Can set movement priorities to allow higher-priority minions to path before lower-priority minions
 
 ## Roadmap
 
@@ -120,6 +121,31 @@ moveByPath(haulerCreep, storage.room.name + source.id + '2');
 // return home from remote source, following path
 moveByPath(haulerCreep, storage.room.name + source.id + '1', { reverse: true });
 ```
+
+### Traffic Management
+
+Traffic management can be enabled by simply including the `reconcileTraffic` function in your main loop, after all creep movement has been requested:
+
+```ts
+export const loop = () => {
+  runCreepLogic();
+  reconcileTraffic();
+};
+```
+
+If `reconcileTraffic` is not included, creeps will simply default to unmanaged movement. Be careful to run potentially expensive operations _after_ reconcileTraffic to avoid running out of bucket - your creeps _will not move_ if you run out of CPU in a tick before reconcileTraffic gets a chance to run.
+
+`reconcileTraffic` will only manage creeps that use Cartographer to move; it does not affect Creep prototype move methods.
+
+### Setting Movement Priorities
+
+All move functions accept a `priority` option:
+
+```ts
+moveTo(creep, controller, { priority: 10 });
+```
+
+Creeps with a higher priority will be given preference over creeps with a lower priority: if both want to path to the same square on a given tick, the one with a higher priority will move and the one with a lower priority will not (also saving its intent cost).
 
 ## Testing Cartographer
 

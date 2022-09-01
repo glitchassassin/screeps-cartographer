@@ -12,7 +12,7 @@ export function moveByPath(creep: Creep, key: string, opts?: MoveByCachedPathOpt
     // need to move to the path
     const path = getCachedPath(key, opts);
     if (!path) return ERR_NO_PATH;
-    return moveTo(creep, path);
+    return moveTo(creep, path, opts);
   }
   return result;
 }

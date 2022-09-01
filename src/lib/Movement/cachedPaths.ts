@@ -5,6 +5,7 @@ import { HeapCache } from 'lib/CachingStrategies/Heap';
 import { MemoryCache } from 'lib/CachingStrategies/Memory';
 import { creepKey } from 'lib/Keys/Creep';
 import { generatePath } from './generatePath';
+import { move } from './move';
 import { normalizeTargets } from './selectors';
 
 const cachedPathKey = (key: string) => `_poi_${key}`;
@@ -31,6 +32,22 @@ export function cachePath(
   const cache = actualOpts.cache ?? MemoryCache;
 
   const normalizedTargets = normalizeTargets(targets, opts?.keepTargetInRoom);
+
+  if (opts?.visualizePathStyle) {
+    const style = {
+      ...config.DEFAULT_VISUALIZE_OPTS,
+      ...opts.visualizePathStyle
+    };
+    for (const t of normalizedTargets) {
+      new RoomVisual(t.pos.roomName).rect(
+        t.pos.x - t.range - 0.5,
+        t.pos.y - t.range - 0.5,
+        t.range * 2 + 1,
+        t.range * 2 + 1,
+        style
+      );
+    }
+  }
 
   // check if cached POI already exists
   const cached = cache.with(PositionListSerializer).get(cachedPathKey(key));
@@ -65,10 +82,8 @@ export function resetCachedPath(key: string, opts?: { cache?: CachingStrategy })
   cache.delete(cachedPathKey(key));
 }
 
-export interface MoveByCachedPathOpts {
+export interface MoveByCachedPathOpts extends MoveOpts {
   reverse?: boolean;
-  cache?: CachingStrategy;
-  visualizePathStyle?: PolyStyle;
 }
 
 /**
@@ -133,7 +148,7 @@ export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpt
     creep.room.visual.poly(pathSegment, style);
   }
 
-  const result = creep.move(creep.pos.getDirectionTo(path[nextIndex]));
+  const result = move(creep, [path[nextIndex]], opts?.priority);
 
   return result;
 }

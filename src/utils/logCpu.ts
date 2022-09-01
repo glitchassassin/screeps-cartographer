@@ -20,6 +20,6 @@ export const logCpu = (context: string) => {
   }
   const [invocations, time] = log.get(context) ?? [0, 0];
   const cpu = Game.cpu.getUsed();
-  log.set(context, [invocations + 1, time + (cpu - last)]);
+  log.set(context, [invocations + 1, time + Math.max(0, cpu - last)]);
   last = cpu;
 };

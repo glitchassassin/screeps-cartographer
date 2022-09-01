@@ -7,7 +7,8 @@ import { logCpu, logCpuStart } from 'utils/logCpu';
 import { config } from '../../config';
 import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';
-import { normalizeTargets } from './selectors';
+import { move } from './move';
+import { adjacentWalkablePositions, normalizeTargets } from './selectors';
 
 const DEBUG = false;
 
@@ -88,8 +89,20 @@ export const moveTo = (
     // check if movement is complete
     if (!needToFlee && pos.inRangeTo(creep.pos, range) && creep.pos.roomName === pos.roomName) {
       if (!opts?.flee) {
+        // no need to move, path complete
         clearCachedPath(creep, cache);
-        return OK; // no need to move, path complete
+        // register move intent to stay here or in an adjacent viable position
+        move(
+          creep,
+          [
+            creep.pos,
+            ...adjacentWalkablePositions(creep.pos, true).filter(p =>
+              normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
+            )
+          ],
+          actualOpts.priority
+        );
+        return OK;
       } else {
         needToFlee = true; // need to move, still in range of flee targets
       }
@@ -104,6 +117,18 @@ export const moveTo = (
 
   if (DEBUG) logCpu('checking targets');
 
+  // cache opts
+  const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;
+  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), normalizedTargets, expiration);
+  cache.with(JsonSerializer).set(
+    creepKey(creep, keys.CACHED_PATH_OPTS),
+    optCacheFields.reduce((sum, f) => {
+      sum[f] = actualOpts[f] as any;
+      return sum;
+    }, {} as MoveOpts),
+    expiration
+  );
+
   // If creep is stuck, we need to repath
   if (
     actualOpts.repathIfStuck &&
@@ -117,36 +142,38 @@ export const moveTo = (
     };
   }
 
-  // cache opts
-  const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;
-  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), normalizedTargets, expiration);
-  cache.with(JsonSerializer).set(
-    creepKey(creep, keys.CACHED_PATH_OPTS),
-    optCacheFields.reduce((sum, f) => {
-      sum[f] = actualOpts[f] as any;
-      return sum;
-    }, {} as MoveOpts),
-    expiration
-  );
-
   if (DEBUG) logCpu('checking if creep is stuck');
 
   // generate cached path, if needed
   const path = cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
 
   if (DEBUG) logCpu('generating cached path');
+
+  // move to any viable target square, if path is nearly done
+  if (path && path[path.length - 2]?.isEqualTo(creep.pos)) {
+    // Nearly at end of path
+    move(
+      creep,
+      adjacentWalkablePositions(creep.pos, true).filter(p => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))),
+      actualOpts.priority
+    );
+    return OK;
+  }
+
   // move by path
   let result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
-    cache,
-    visualizePathStyle: opts?.visualizePathStyle
+    ...actualOpts,
+    reverse: false,
+    cache
   });
   if (result === ERR_NOT_FOUND) {
     // creep has fallen off path: repath and try again
     clearCachedPath(creep, cache);
     cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
     result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
-      cache,
-      visualizePathStyle: opts?.visualizePathStyle
+      ...actualOpts,
+      reverse: false,
+      cache
     });
   }
 

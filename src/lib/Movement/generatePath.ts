@@ -7,6 +7,9 @@ export interface GeneratePathOpts extends PathFinderOpts {
   roadCost?: number;
 }
 
+/**
+ * Generates a path with PathFinder
+ */
 export function generatePath(
   origin: RoomPosition,
   targets: MoveTarget[],
