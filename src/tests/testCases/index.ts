@@ -7,16 +7,18 @@ import { TestPriority } from './TestPriority';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
 import { TestShove } from './TestShove';
 import { TestStuck } from './TestStuck';
+import { TestSwarm } from './TestSwarm';
 import { TestTrain } from './TestTrain';
 
 export const testCases = [
-  new TestRoomEdgeRange(),
+  new TestSwarm(),
   new TestFlee(),
   new TestStuck(),
   new TestCachedPaths(),
   new TestPriority(),
   new TestShove(),
-  new TestTrain()
+  new TestTrain(),
+  new TestRoomEdgeRange()
 ];
 const testResults = new Map<CartographerTestCase, TestResult>();
 let reported = false;
@@ -46,6 +48,7 @@ export function runTestCases() {
     if (result !== TestResult.PENDING) {
       testResults.set(test, result);
     }
+    if (result === TestResult.PENDING) break; // wait for test to finish
   }
 }
 
@@ -59,6 +62,8 @@ function plotTestCases() {
   while (frontier.length) {
     const current = frontier.shift()!;
     for (const next of calculateNearbyPositions(current, 1)) {
+      if (next.look().find(c => c.structure || c.terrain === 'wall')) continue;
+      frontier.push(next);
       const test = toPlot[0];
       if (!test) return;
 
@@ -67,6 +72,7 @@ function plotTestCases() {
         .every(
           p =>
             p.terrain !== 'wall' &&
+            !p.structure &&
             !plotted.some(
               t =>
                 p.x >= t.testRegionOrigin!.x &&

@@ -4,15 +4,18 @@ interface MoveIntent {
   creep: Creep;
   priority: number;
   targets: RoomPosition[];
+  resolved?: boolean;
+  targetCount?: number;
 }
 
 const generateIndexes = () => ({
   creep: new Map<Creep, MoveIntent>(),
   priority: new Map<number, Map<number, Map<Creep, MoveIntent>>>(),
   targets: new Map<string, Map<Creep, MoveIntent>>(),
-  pullers: new Set<Creep>()
+  pullers: new Set<Creep>(),
+  prefersToStay: new Set<string>()
 });
-let _indexes = generateIndexes();
+let _indexes = new Map<string, ReturnType<typeof generateIndexes>>();
 let tick = 0;
 
 /**
@@ -25,12 +28,20 @@ let tick = 0;
  *  - targets: Index of intents by position, then by creep
  *  - pullers: Index of puller creeps
  */
-export function getMoveIntents() {
+export function getMoveIntents(room: string) {
   if (Game.time !== tick) {
     tick = Game.time;
-    _indexes = generateIndexes();
+    _indexes = new Map();
   }
-  return _indexes;
+  _indexes.set(room, _indexes.get(room) ?? generateIndexes());
+  return _indexes.get(room)!;
+}
+
+/**
+ * Lists the rooms with move intents to handle
+ */
+export function getMoveIntentRooms() {
+  return [..._indexes.keys()];
 }
 
 /**
@@ -38,7 +49,7 @@ export function getMoveIntents() {
  * pulled creeps)
  */
 export function registerPull(puller: Creep) {
-  const intents = getMoveIntents();
+  const intents = getMoveIntents(puller.pos.roomName);
   intents.pullers.add(puller);
 }
 
@@ -49,7 +60,8 @@ export function registerMove(intent: MoveIntent, pulled = false) {
   if (intent.creep.fatigue && !pulled) {
     intent.targets = [intent.creep.pos];
   }
-  const indexes = getMoveIntents();
+  intent.targetCount ??= intent.targets.length;
+  const indexes = getMoveIntents(intent.creep.pos.roomName);
   indexes.creep.set(intent.creep, intent);
   const byPriority = indexes.priority.get(intent.priority) ?? new Map();
   indexes.priority.set(intent.priority, byPriority);
@@ -62,17 +74,20 @@ export function registerMove(intent: MoveIntent, pulled = false) {
     indexes.targets.set(key, targets);
     targets.set(intent.creep, intent);
   }
+  if (intent.targets.length && intent.targets[0].isEqualTo(intent.creep.pos)) {
+    indexes.prefersToStay.add(packPos(intent.creep.pos));
+  }
 }
 
 /**
  * Updates an intent's indexes when its target count changes
  */
-export function updateIntentTargetCount(intent: MoveIntent, oldCount: number) {
-  const indexes = getMoveIntents();
+export function updateIntentTargetCount(intent: MoveIntent, oldCount: number, newCount: number) {
+  const indexes = getMoveIntents(intent.creep.pos.roomName);
   const byPriority = indexes.priority.get(intent.priority) ?? new Map<number, Map<Creep, MoveIntent>>();
   byPriority.get(oldCount)?.delete(intent.creep);
   indexes.priority.set(intent.priority, byPriority);
-  const byTargetCount = byPriority.get(intent.targets.length) ?? new Map<Creep, MoveIntent>();
-  byPriority.set(intent.priority, byTargetCount);
+  const byTargetCount = byPriority.get(newCount) ?? new Map<Creep, MoveIntent>();
+  byPriority.set(newCount, byTargetCount);
   byTargetCount.set(intent.creep, intent);
 }

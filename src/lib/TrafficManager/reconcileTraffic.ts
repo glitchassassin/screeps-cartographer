@@ -1,8 +1,10 @@
 import { MemoryCache } from 'lib/CachingStrategies/Memory';
 import { NumberSerializer } from 'lib/CachingStrategies/Serializers/Number';
 import { adjacentWalkablePositions } from 'lib/Movement/selectors';
-import { packPos, unpackPos } from 'utils/packrat';
-import { getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
+// import { logCpu, logCpuStart } from 'utils/logCpu';
+import { packPos } from 'utils/packrat';
+import { measure } from 'utils/profiler';
+import { getMoveIntentRooms, getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
 
 const DEBUG = false;
 
@@ -19,6 +21,8 @@ export function reconciledRecently() {
   return Boolean(lastReconciled && Game.time - 2 <= lastReconciled);
 }
 
+let efficiency: number[] = [];
+
 /**
  * Include this function in your main loop after all creep movement to enable traffic
  * management.
@@ -28,8 +32,16 @@ export function reconciledRecently() {
  * after two ticks.
  */
 export function reconcileTraffic() {
+  for (const room of getMoveIntentRooms()) {
+    reconcileTrafficByRoom(room);
+  }
+}
+
+function reconcileTrafficByRoom(room: string) {
+  const start = Game.cpu.getUsed();
+  let moveTime = 0;
   const used = new Set<string>();
-  const moveIntents = getMoveIntents();
+  const moveIntents = getMoveIntents(room);
 
   // visualize
   if (DEBUG) {
@@ -45,47 +57,48 @@ export function reconcileTraffic() {
   }
 
   // Set move intents for shove targets
-  for (const posKey of moveIntents.targets.keys()) {
-    const pos = unpackPos(posKey);
+  for (const movingCreep of moveIntents.creep.keys()) {
+    const adjacentCreeps = movingCreep.pos.findInRange(FIND_MY_CREEPS, 1);
+    while (adjacentCreeps.length) {
+      const creep = adjacentCreeps.shift()!;
+      if (moveIntents.creep.has(creep)) continue;
+      adjacentCreeps.push(...creep.pos.findInRange(FIND_MY_CREEPS, 1).filter(c => !moveIntents.creep.has(c)));
 
-    if (DEBUG) Game.rooms[pos.roomName]?.visual.text(moveIntents.targets.get(posKey)?.size.toString() ?? '0', pos);
-
-    if (!Game.rooms[pos.roomName]) {
-      console.log('Out-of-room target', pos, JSON.stringify(moveIntents.targets.get(posKey)));
-      continue;
-    }
-    const target = pos.look().find(t => t.creep);
-    if (target?.creep?.my && !moveIntents.creep.has(target.creep)) {
       registerMove({
-        creep: target.creep,
+        creep,
         priority: 0,
-        targets: [target.creep.pos, ...adjacentWalkablePositions(target.creep.pos, true)]
+        targets: [creep.pos, ...adjacentWalkablePositions(creep.pos, true)]
       });
 
-      if (DEBUG) target.creep.room.visual.circle(pos, { radius: 1.5, stroke: 'red', fill: 'transparent ' });
+      if (DEBUG) creep.room.visual.circle(creep.pos, { radius: 1.5, stroke: 'red', fill: 'transparent ' });
     }
   }
 
   // remove pullers as move targets
   for (const puller of moveIntents.pullers) {
     const posKey = packPos(puller.pos);
+    used.add(posKey);
     for (const intent of moveIntents.targets.get(posKey)?.values() ?? []) {
       if (intent.creep === puller) continue;
-      const oldCount = intent.targets.length;
-      const index = intent.targets.findIndex(p => puller.pos.isEqualTo(p));
-      if (index !== -1) intent.targets.splice(index, 1);
+
+      intent.targetCount ??= intent.targets.length;
+      const oldCount = intent.targetCount;
+      intent.targetCount -= 1;
       // update priority/count index
-      updateIntentTargetCount(intent, oldCount);
+      updateIntentTargetCount(intent, oldCount, intent.targetCount);
     }
   }
 
+  // logCpuStart();
   const priorities = [...moveIntents.priority.entries()].sort((a, b) => b[0] - a[0]);
+  // logCpu('sorting priorities');
   for (const [_, priority] of priorities) {
     while (priority.size) {
       const minPositionCount = Math.min(...priority.keys());
       const intents = priority.get(minPositionCount);
       if (!intents) break;
       if (!intents.size) priority.delete(minPositionCount);
+      // logCpu('getting prioritized intents');
 
       for (const intent of intents.values()) {
         if (DEBUG) {
@@ -95,7 +108,8 @@ export function reconcileTraffic() {
                 radius: 0.5,
                 stroke: 'yellow',
                 strokeWidth: 0.2,
-                fill: 'transparent'
+                fill: 'transparent',
+                opacity: 0.2
               });
             } else {
               intent.creep.room.visual.line(intent.creep.pos, t, { color: 'yellow', width: 0.2 });
@@ -104,11 +118,22 @@ export function reconcileTraffic() {
         }
         // get the first position with no conflicts, or else the position with
         // fewest conflicts
-        let targetPos: RoomPosition | undefined = intent.targets[0];
+
+        let targetPos: RoomPosition | undefined = undefined;
+        for (const target of intent.targets) {
+          const p = packPos(target);
+          if (used.has(p)) continue; // a creep is already moving here
+          if (intent.creep.pos.isEqualTo(target) || !moveIntents.prefersToStay.has(p)) {
+            // best case - no other creep prefers to stay here
+            targetPos = target;
+            break;
+          }
+          targetPos = target;
+        }
 
         // handling intent, remove from queue
         intents.delete(intent.creep);
-        moveIntents.creep.delete(intent.creep);
+        // logCpu('handling intent');
 
         if (!targetPos) {
           // no movement options
@@ -133,29 +158,39 @@ export function reconcileTraffic() {
         }
 
         // resolve intent
-        intent.creep.move(intent.creep.pos.getDirectionTo(targetPos));
+        moveTime += measure(() => intent.creep.move(intent.creep.pos.getDirectionTo(targetPos!)));
+        intent.resolved = true;
+        // logCpu('resolving intent');
 
         if (DEBUG) intent.creep.room.visual.line(intent.creep.pos, targetPos, { color: 'green', width: 0.5 });
 
-        // mark pos as used
+        // remove pos from other intents targeting the same position
         const posKey = packPos(targetPos);
         used.add(posKey);
-        // remove intent from other target positions
-        for (const pos of intent.targets) {
-          moveIntents.targets.get(packPos(pos))?.delete(intent.creep);
-        }
-        // remove pos from other intents targeting the same position
         for (const sameTargetIntent of moveIntents.targets.get(posKey)?.values() ?? []) {
-          if (intent === sameTargetIntent) continue;
-          const oldCount = sameTargetIntent.targets.length;
-          const index = sameTargetIntent.targets.findIndex(p => targetPos?.isEqualTo(p));
-          if (index !== -1) sameTargetIntent.targets.splice(index, 1);
+          if (sameTargetIntent.resolved) continue;
+
+          sameTargetIntent.targetCount ??= sameTargetIntent.targets.length;
+          const oldCount = sameTargetIntent.targetCount;
+          sameTargetIntent.targetCount -= 1;
+
           // update priority/count index
-          updateIntentTargetCount(sameTargetIntent, oldCount);
+          updateIntentTargetCount(sameTargetIntent, oldCount, sameTargetIntent.targetCount);
         }
+        // logCpu('removing move position from other intents');
       }
     }
   }
   // log that traffic management is active
   MemoryCache.with(NumberSerializer).set(keys.RECONCILE_TRAFFIC_RAN, Game.time);
+
+  const totalTime = Math.max(0, Game.cpu.getUsed() - start);
+  efficiency.push(moveTime / totalTime);
+  if (efficiency.length > 1500) efficiency = efficiency.slice(-1500);
+  console.log(
+    `reconcileTraffic: total(${totalTime.toFixed(3)} cpu), efficiency(${(
+      (100 * efficiency.reduce((a, b) => a + b)) /
+      efficiency.length
+    ).toFixed(2)}%)`
+  );
 }

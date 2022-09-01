@@ -9,6 +9,12 @@ export const profile = <T>(key: string, callback: () => T): T => {
   return result;
 };
 
+export const measure = (callback: () => void) => {
+  const start = Game.cpu.getUsed();
+  callback();
+  return Math.max(0, Game.cpu.getUsed() - start);
+};
+
 export const profileReport = () => {
   console.log();
   const maxLength = Math.max('Profiling'.length - 2, ...[...profileCache.keys()].map(key => key.length));

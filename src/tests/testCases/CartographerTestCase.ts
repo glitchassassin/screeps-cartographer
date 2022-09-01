@@ -65,15 +65,18 @@ export abstract class CartographerTestCase {
         // creep was spawned, but has died: test failed
         return TestResult.FAIL;
       }
-      if (this._creeps[key] === '') {
+      const prefix = `${this.constructor.name}_${key}`;
+      if (!this.creeps[key] || this.creeps[key].spawning) {
         // creep needs spawned
         pending = true;
-        const prefix = `${this.constructor.name}_${key}`;
+      }
+      if (this._creeps[key] === '' && !this.spawn.spawning) {
         const name = `${prefix}_${Game.time % 10000}`;
         this.spawn.spawnCreep([MOVE], name, { memory: { room: this.spawn.room.name } });
-        if (this.spawn.spawning?.name.startsWith(prefix)) {
-          this._creeps[key] = this.spawn.spawning.name;
-        }
+        break;
+      }
+      if (this.spawn.spawning?.name.startsWith(prefix)) {
+        this._creeps[key] = this.spawn.spawning.name;
       }
     }
     // Clean up abandoned creeps
