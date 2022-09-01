@@ -136,7 +136,7 @@ export const loop = () => {
 
 If `reconcileTraffic` is not included, creeps will simply default to unmanaged movement. Be careful to run potentially expensive operations _after_ reconcileTraffic to avoid running out of bucket - your creeps _will not move_ if you run out of CPU in a tick before reconcileTraffic gets a chance to run.
 
-`reconcileTraffic` will only manage creeps that use Cartographer to move; it does not affect Creep prototype move methods.
+`reconcileTraffic` will only manage creeps that use Cartographer to move; it is not compatible with Creep prototype move methods, so will cause issues if you try to mix both approaches. **It's best to pick one or the other for all creep movement.**
 
 ### Setting Movement Priorities
 
