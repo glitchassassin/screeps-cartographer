@@ -77,12 +77,7 @@ export const moveTo = (
 
   // if relevant opts have changed, clear cached path
   const cachedOpts = cache.with(JsonSerializer).get(creepKey(creep, keys.CACHED_PATH_OPTS));
-  if (
-    !cachedOpts ||
-    optCacheFields.some(
-      f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f] && fallbackOpts[f as keyof MoveOpts] !== cachedOpts[f]
-    )
-  ) {
+  if (!cachedOpts || optCacheFields.some(f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f])) {
     clearCachedPath(creep, cache);
   }
 
@@ -122,6 +117,18 @@ export const moveTo = (
 
   if (DEBUG) logCpu('checking targets');
 
+  // cache opts
+  const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;
+  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), normalizedTargets, expiration);
+  cache.with(JsonSerializer).set(
+    creepKey(creep, keys.CACHED_PATH_OPTS),
+    optCacheFields.reduce((sum, f) => {
+      sum[f] = actualOpts[f] as any;
+      return sum;
+    }, {} as MoveOpts),
+    expiration
+  );
+
   // If creep is stuck, we need to repath
   if (
     actualOpts.repathIfStuck &&
@@ -135,24 +142,24 @@ export const moveTo = (
     };
   }
 
-  // cache opts
-  const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;
-  cache.with(MoveTargetListSerializer).set(creepKey(creep, keys.CACHED_PATH_TARGETS), normalizedTargets, expiration);
-  cache.with(JsonSerializer).set(
-    creepKey(creep, keys.CACHED_PATH_OPTS),
-    optCacheFields.reduce((sum, f) => {
-      sum[f] = actualOpts[f] as any;
-      return sum;
-    }, {} as MoveOpts),
-    expiration
-  );
-
   if (DEBUG) logCpu('checking if creep is stuck');
 
   // generate cached path, if needed
   const path = cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
 
   if (DEBUG) logCpu('generating cached path');
+
+  // move to any viable target square, if path is nearly done
+  if (path && path[path.length - 2]?.isEqualTo(creep.pos)) {
+    // Nearly at end of path
+    move(
+      creep,
+      adjacentWalkablePositions(creep.pos, true).filter(p => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))),
+      actualOpts.priority
+    );
+    return OK;
+  }
+
   // move by path
   let result = followPath(creep, creepKey(creep, keys.CACHED_PATH), {
     ...actualOpts,
