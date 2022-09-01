@@ -1,6 +1,6 @@
 {
   "name": "screeps-cartographer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "An advanced (and open source) movement library for Screeps",
   "homepage": "https://glitchassassin.github.io/screeps-cartographer/",
   "repository": {
@@ -26,7 +26,8 @@
     "movement",
     "traveling",
     "path",
-    "pathfinding"
+    "pathfinding",
+    "traffic"
   ],
   "author": "LordGreywether",
   "license": "MIT",
