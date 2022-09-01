@@ -26,7 +26,7 @@ In case of collision, no moving creep should be allowed to move into the square 
 
 ## Solution Algorithm
 
-To begin with, we'll collect all the move intents for creeps that plan to move this tick. Creeps that don't need to move, but do want to stay in range of a target, will also submit a move intent (with the first target being their current position).
+To begin with, we'll collect all the move intents for creeps that plan to move this tick. Creeps that don't need to move, but do want to stay in range of a target, will also submit a move intent (with the first target being their current position). And we'll give any other creep a generic move intent that allows them to move in any direction (but prefers to stay put).
 
 We'll index these intents by creep, target position, priority, and target count so we can look them up quickly later.
 
@@ -38,14 +38,18 @@ interface MoveIntent {
 }
 ```
 
-Once all the move intents are registered, we'll check each of the target positions and, if there's an idle creep (with no move intent), register a new move intent for any adjacent square.
-
-Then we'll remove any target positions from intents that are currently occupied by pullers (so other creeps can't move into and break a train).
+We'll remove any target positions from intents that are currently occupied by pullers (so other creeps can't move into and break a train).
 
 Now we have the total set of moves for this tick. Each creep has a set of possible destination squares. We'll use a variant of the wavefunction collapse algorithm to reduce these to a single definite move.
 
 We'll loop through the intents by priority (highest priority to lowest priority). For each priority tier:
 
-1. We'll get the intent with the _fewest_ possible destination squares, and resolve that intent with the first target in its targets list. (The targets list is sorted by preference, with the most preferred target at the beginning of the list.)
+1. We'll get the intent with the _fewest_ possible destination squares, and resolve that intent with the first target in its targets list that:
+
+- Hasn't been resolved already, and
+- Doesn't have a creep that prefers to stay put (unless _all_ possible squares do, in which case just take the first target)
+
 2. After moving the creep to the target square, we'll remove the target from every other intent that has the same target square, reducing the number of targets in their target lists.
 3. Repeat from step 1 until all intents are resolved.
+
+This gives a reasonably optimal, though not perfect, move solution.

@@ -123,7 +123,7 @@ function reconcileTrafficByRoom(room: string) {
             targetPos = target;
             break;
           }
-          targetPos = target;
+          targetPos ??= target;
         }
 
         // handling intent, remove from queue
