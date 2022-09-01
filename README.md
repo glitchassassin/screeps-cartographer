@@ -12,12 +12,13 @@
 - Can trigger repathing when creeps are stuck
 - Can cache custom paths for road-building or reuse with Cartographer's `moveByPath`
 - Can set movement priorities to allow higher-priority minions to path before lower-priority minions
+- Traffic management moves stationary minions out of the way of moving ones, while allowing them to keep range to a target
 
 ## Roadmap
 
 - [x] Replacement for stock moveTo with configurable caching and full PathFinder options
 - [x] Point-of-interest path caching for remotes & local economy movement
-- [ ] Traffic management with creep prioritization & shoving
+- [x] Traffic management with creep prioritization & shoving
 - [ ] Long-distance travel with better paths than Game.map.findRoute yields
 
 ## Using Cartographer
