@@ -33,8 +33,11 @@ let efficiency: number[] = [];
  */
 export function reconcileTraffic() {
   for (const room of getMoveIntentRooms()) {
+    if (!Game.rooms[room]) continue;
     reconcileTrafficByRoom(room);
   }
+  // log that traffic management is active
+  MemoryCache.with(NumberSerializer).set(keys.RECONCILE_TRAFFIC_RAN, Game.time);
 }
 
 function reconcileTrafficByRoom(room: string) {
@@ -176,16 +179,14 @@ function reconcileTrafficByRoom(room: string) {
       }
     }
   }
-  // log that traffic management is active
-  MemoryCache.with(NumberSerializer).set(keys.RECONCILE_TRAFFIC_RAN, Game.time);
 
   const totalTime = Math.max(0, Game.cpu.getUsed() - start);
   efficiency.push(moveTime / totalTime);
   if (efficiency.length > 1500) efficiency = efficiency.slice(-1500);
-  console.log(
-    `reconcileTraffic: total(${totalTime.toFixed(3)} cpu), efficiency(${(
-      (100 * efficiency.reduce((a, b) => a + b)) /
-      efficiency.length
-    ).toFixed(2)}%)`
-  );
+  // console.log(
+  //   `reconcileTraffic: total(${totalTime.toFixed(3)} cpu), efficiency(${(
+  //     (100 * efficiency.reduce((a, b) => a + b)) /
+  //     efficiency.length
+  //   ).toFixed(2)}%)`
+  // );
 }

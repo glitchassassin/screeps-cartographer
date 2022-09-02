@@ -45,7 +45,11 @@ export const scout = {
         }
       }
     }
-    if (!creep.memory.scoutTarget) return; // no more rooms to scout
+    if (!creep.memory.scoutTarget) {
+      // no more rooms to scout; reset!
+      Memory.rooms = {};
+      return;
+    }
 
     moveTo(
       creep,

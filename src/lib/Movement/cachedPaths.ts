@@ -145,7 +145,10 @@ export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpt
       ...opts.visualizePathStyle
     };
     const pathSegment = opts?.reverse ? path.slice(0, currentIndex) : path.slice(nextIndex);
-    creep.room.visual.poly(pathSegment, style);
+    creep.room.visual.poly(
+      pathSegment.filter(pos => pos.roomName === creep.room.name),
+      style
+    );
   }
 
   const result = move(creep, [path[nextIndex]], opts?.priority);

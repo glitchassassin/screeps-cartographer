@@ -4,12 +4,18 @@ export const config = {
   DEFAULT_MOVE_OPTS: {
     avoidCreeps: false,
     avoidObstacleStructures: true,
+    avoidSourceKeepers: true,
     keepTargetInRoom: true,
     repathIfStuck: 3,
     roadCost: 1,
     plainCost: 2,
     swampCost: 10,
-    priority: 1
+    priority: 1,
+    defaultRoomCost: 2,
+    highwayRoomCost: 1,
+    sourceKeeperRoomCost: 2,
+    maxRooms: 64,
+    maxOps: 100000
   } as MoveOpts,
   DEFAULT_VISUALIZE_OPTS: {
     fill: 'transparent',
@@ -18,6 +24,12 @@ export const config = {
     strokeWidth: 0.15,
     opacity: 0.1
   } as PolyStyle,
+  DEFAULT_FIND_ROUTE_OPTS: {
+    maxRooms: 64,
+    defaultRoomCost: 2,
+    highwayRoomCost: 1,
+    sourceKeeperRoomCost: 2
+  },
   MEMORY_CACHE_PATH: '_cg',
   MEMORY_CACHE_EXPIRATION_PATH: '_cge'
 };

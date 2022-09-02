@@ -1,7 +1,10 @@
+import { avoidSourceKeepers } from './sourceKeepers';
+
 export type CostMatrixMutator = (cm: CostMatrix, room: string) => CostMatrix;
 export interface CostMatrixOptions {
   avoidCreeps?: boolean;
   avoidObstacleStructures?: boolean;
+  avoidSourceKeepers?: boolean;
   roadCost?: number;
 }
 
@@ -11,6 +14,9 @@ export interface CostMatrixOptions {
 export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixOptions) => {
   if (opts.avoidCreeps) {
     Game.rooms[room]?.find(FIND_CREEPS).forEach(c => cm.set(c.pos.x, c.pos.y, 255));
+  }
+  if (opts.avoidSourceKeepers) {
+    avoidSourceKeepers(room, cm);
   }
   if (opts.avoidObstacleStructures || opts.roadCost) {
     if (opts.avoidObstacleStructures) {

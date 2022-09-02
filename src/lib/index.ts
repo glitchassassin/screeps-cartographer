@@ -1,4 +1,5 @@
 import { CachingStrategy, cleanAllCaches } from './CachingStrategies';
+import { updateIntel } from './CostMatrixes/sourceKeepers';
 
 export type MoveTarget = { pos: RoomPosition; range: number };
 export interface MoveOpts extends PathFinderOpts {
@@ -33,6 +34,11 @@ export interface MoveOpts extends PathFinderOpts {
    */
   avoidObstacleStructures?: boolean;
   /**
+   * Always path around Source Keeper-protected resources.
+   */
+  avoidSourceKeepers?: boolean;
+
+  /**
    * Cost for walking on road positions. The default is 1.
    */
   roadCost?: number;
@@ -48,6 +54,27 @@ export interface MoveOpts extends PathFinderOpts {
    * Movement priority (higher-value moves override lower-value moves). The default is 1.
    */
   priority?: number;
+  /**
+   * Default cost for a room in findRoute callback (may be overridden
+   * if routeCallback is provided). Defaults to 2.
+   */
+  defaultRoomCost?: number;
+  /**
+   * Cost for a Source Keeper room in findRoute callback (may be overridden
+   * if routeCallback is provided). Defaults to 2.
+   */
+  sourceKeeperRoomCost?: number;
+  /**
+   * Cost for a highway room in findRoute callback (may be overridden
+   * if routeCallback is provided). Defaults to 1.
+   */
+  highwayRoomCost?: number;
+  /**
+   * This callback works like the builtin `findRoute` and will override
+   * the default values for highway/source keeper room cost unless you
+   * return `undefined`.
+   */
+  routeCallback?: (roomName: string, fromRoomName: string) => number | undefined;
 }
 
 export * from './CachingStrategies';
@@ -60,4 +87,5 @@ export * from './TrafficManager/reconcileTraffic';
 
 export function preTick() {
   cleanAllCaches();
+  updateIntel();
 }
