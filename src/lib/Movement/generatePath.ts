@@ -1,5 +1,6 @@
 import { MoveTarget } from 'lib';
 import { mutateCostMatrix } from 'lib/CostMatrixes';
+import { findRoute } from 'lib/WorldMap/findRoute';
 
 export interface GeneratePathOpts extends PathFinderOpts {
   avoidCreeps?: boolean;
@@ -15,10 +16,28 @@ export function generatePath(
   targets: MoveTarget[],
   opts: GeneratePathOpts
 ): RoomPosition[] | undefined {
+  // check if we need a route to limit search space
+  const exits = Object.values(Game.map.describeExits(origin.roomName));
+  let rooms: string[] | undefined = undefined;
+  if (!targets.some(({ pos }) => pos.roomName === origin.roomName || exits.includes(pos.roomName))) {
+    // if there are multiple rooms in `targets`, pick the cheapest route
+    const targetRooms = targets.reduce(
+      (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
+      [] as string[]
+    );
+    for (const room of targetRooms) {
+      const route = findRoute(origin.roomName, room, opts);
+      if (route && (!rooms || route.length < rooms.length)) {
+        rooms = route;
+      }
+    }
+    console.log('generated path from', origin.roomName, 'to', targetRooms, ':', rooms);
+  }
   // generate path
   const result = PathFinder.search(origin, targets, {
     ...opts,
     roomCallback(room) {
+      if (rooms && !rooms.includes(room)) return false; // outside route search space
       let cm = opts.roomCallback?.(room);
       if (cm === false) return cm;
       const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
