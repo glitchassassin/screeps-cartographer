@@ -13,13 +13,14 @@
 - Can cache custom paths for road-building or reuse with Cartographer's `moveByPath`
 - Can set movement priorities to allow higher-priority minions to path before lower-priority minions
 - Traffic management moves stationary minions out of the way of moving ones, while allowing them to keep range to a target
+- Enhanced findRoute reduces PathFinder search space with intelligent heuristics to produce optimal paths
 
 ## Roadmap
 
 - [x] Replacement for stock moveTo with configurable caching and full PathFinder options
 - [x] Point-of-interest path caching for remotes & local economy movement
 - [x] Traffic management with creep prioritization & shoving
-- [ ] Long-distance travel with better paths than Game.map.findRoute yields
+- [x] Long-distance travel with better paths than Game.map.findRoute yields
 
 ## Using Cartographer
 
@@ -148,6 +149,41 @@ moveTo(creep, controller, { priority: 10 });
 ```
 
 Creeps with a higher priority will be given preference over creeps with a lower priority: if both want to path to the same square on a given tick, the one with a higher priority will move and the one with a lower priority will not (also saving its intent cost).
+
+### Long-Range Pathing
+
+Cartographer uses the builtin `findRoute` as a starting point, but the shortest route (by room count) is not always the best path (by tiles traversed). With some intelligent heuristics, it adds a few rooms to the route that may allow PathFinder to take a shortcut. PathFinder's search is then constrained to those selected rooms.
+
+To control the selected route, you can set weights for types of rooms:
+
+```ts
+moveTo(
+  creep,
+  { pos: new RoomPosition(25, 25, 'W20N20'), range: 20 },
+  {
+    defaultRoomCost: 1,
+    sourceKeeperRoomCost: 10,
+    highwayRoomCost: 2
+  }
+);
+```
+
+You can also provide a custom callback to provide weights or avoid certain rooms:
+
+```ts
+moveTo(
+  creep,
+  { pos: new RoomPosition(25, 25, 'W20N20'), range: 20 },
+  {
+    routeCallback: (room: string) => {
+      if (hostileRooms.includes(room)) {
+        return Infinity;
+      }
+      return undefined;
+    }
+  }
+);
+```
 
 ## Testing Cartographer
 
