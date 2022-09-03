@@ -1,4 +1,4 @@
-import { adjacentWalkablePositions, calculateNearbyPositions } from 'lib/Movement/selectors';
+import { adjacentWalkablePositions, calculateNearbyPositions } from '../../lib/Movement/selectors';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 import { TestCachedPaths } from './TestCachedPaths';

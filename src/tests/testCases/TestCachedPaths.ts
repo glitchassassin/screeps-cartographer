@@ -1,4 +1,4 @@
-import { cachePath, CachingStrategies, followPath, getCachedPath, resetCachedPath } from 'lib';
+import { cachePath, CachingStrategies, followPath, getCachedPath, resetCachedPath } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 

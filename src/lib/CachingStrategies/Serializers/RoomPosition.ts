@@ -1,4 +1,4 @@
-import { Serializer } from 'lib';
+import { Serializer } from '../';
 import {
   Coord,
   packCoord,
@@ -9,7 +9,7 @@ import {
   unpackCoordList,
   unpackPos,
   unpackPosList
-} from 'utils/packrat';
+} from '../../../utils/packrat';
 
 export const PositionSerializer: Serializer<RoomPosition> = {
   key: 'ps',

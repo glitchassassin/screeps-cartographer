@@ -1,7 +1,7 @@
-import { MemoryCache } from 'lib/CachingStrategies/Memory';
-import { PositionListSerializer } from 'lib/CachingStrategies/Serializers/RoomPosition';
-import { calculateNearbyPositions } from 'lib/Movement/selectors';
-import { isSourceKeeperRoom } from 'lib/WorldMap/selectors';
+import { MemoryCache } from '../CachingStrategies/Memory';
+import { PositionListSerializer } from '../CachingStrategies/Serializers/RoomPosition';
+import { calculateNearbyPositions } from '../Movement/selectors';
+import { isSourceKeeperRoom } from '../WorldMap/selectors';
 
 const keys = {
   SOURCE_KEEPER_POS_LIST: '_ck'

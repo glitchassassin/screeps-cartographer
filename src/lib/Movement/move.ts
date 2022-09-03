@@ -1,5 +1,5 @@
-import { registerMove } from 'lib/TrafficManager/moveLedger';
-import { reconciledRecently } from 'lib/TrafficManager/reconcileTraffic';
+import { registerMove } from '../TrafficManager/moveLedger';
+import { reconciledRecently } from '../TrafficManager/reconcileTraffic';
 
 /**
  * Registers a move intent with the Traffic Manager, if reconcileTraffic has

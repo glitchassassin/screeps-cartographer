@@ -1,9 +1,9 @@
-import { config } from 'config';
-import { MoveOpts, MoveTarget } from 'lib';
-import { CachingStrategy, PositionListSerializer } from 'lib/CachingStrategies';
-import { HeapCache } from 'lib/CachingStrategies/Heap';
-import { MemoryCache } from 'lib/CachingStrategies/Memory';
-import { creepKey } from 'lib/Keys/Creep';
+import { MoveOpts, MoveTarget } from '../';
+import { config } from '../../config';
+import { CachingStrategy, PositionListSerializer } from '../CachingStrategies';
+import { HeapCache } from '../CachingStrategies/Heap';
+import { MemoryCache } from '../CachingStrategies/Memory';
+import { creepKey } from '../Keys/Creep';
 import { generatePath } from './generatePath';
 import { move } from './move';
 import { normalizeTargets } from './selectors';

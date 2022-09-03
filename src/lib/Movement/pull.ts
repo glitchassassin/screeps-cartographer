@@ -1,4 +1,4 @@
-import { registerPull } from 'lib/TrafficManager/moveLedger';
+import { registerPull } from '../TrafficManager/moveLedger';
 
 /**
  * Cause `puller` to pull `pulled`, registering the pull so traffic management

@@ -1,9 +1,9 @@
-import { MoveOpts, MoveTarget } from 'lib';
-import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer } from 'lib/CachingStrategies';
-import { JsonSerializer } from 'lib/CachingStrategies/Serializers/Json';
-import { creepKey } from 'lib/Keys/Creep';
-import { logCpu, logCpuStart } from 'utils/logCpu';
-// import { logCpu, logCpuStart } from 'utils/logCpu';
+import { MoveOpts, MoveTarget } from '..';
+import { logCpu, logCpuStart } from '../../utils/logCpu';
+import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer } from '../CachingStrategies';
+import { JsonSerializer } from '../CachingStrategies/Serializers/Json';
+import { creepKey } from '../Keys/Creep';
+// import { logCpu, logCpuStart } from '../../utils/logCpu';
 import { config } from '../../config';
 import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';

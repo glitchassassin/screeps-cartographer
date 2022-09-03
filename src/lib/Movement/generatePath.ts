@@ -1,6 +1,6 @@
-import { MoveTarget } from 'lib';
-import { mutateCostMatrix } from 'lib/CostMatrixes';
-import { findRoute } from 'lib/WorldMap/findRoute';
+import { MoveTarget } from '../';
+import { mutateCostMatrix } from '../CostMatrixes';
+import { findRoute } from '../WorldMap/findRoute';
 
 export interface GeneratePathOpts extends PathFinderOpts {
   avoidCreeps?: boolean;

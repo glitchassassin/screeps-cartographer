@@ -1,4 +1,4 @@
-import { moveTo } from 'lib';
+import { moveTo } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 

@@ -1,9 +1,9 @@
-import { MemoryCache } from 'lib/CachingStrategies/Memory';
-import { NumberSerializer } from 'lib/CachingStrategies/Serializers/Number';
-import { adjacentWalkablePositions } from 'lib/Movement/selectors';
-// import { logCpu, logCpuStart } from 'utils/logCpu';
-import { packPos } from 'utils/packrat';
-import { measure } from 'utils/profiler';
+import { MemoryCache } from '../CachingStrategies/Memory';
+import { NumberSerializer } from '../CachingStrategies/Serializers/Number';
+import { adjacentWalkablePositions } from '../Movement/selectors';
+// import { logCpu, logCpuStart } from '../../utils/logCpu';
+import { packPos } from '../../utils/packrat';
+import { measure } from '../../utils/profiler';
 import { getMoveIntentRooms, getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
 
 const DEBUG = false;

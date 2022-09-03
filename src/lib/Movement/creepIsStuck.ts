@@ -1,5 +1,5 @@
-import { HeapCache } from 'lib/CachingStrategies/Heap';
-import { creepKey } from 'lib/Keys/Creep';
+import { HeapCache } from '../CachingStrategies/Heap';
+import { creepKey } from '../Keys/Creep';
 
 const keys = {
   LAST_POSITION: '_csp',

@@ -1,4 +1,4 @@
-import { MoveTarget } from 'lib';
+import { MoveTarget } from '../lib';
 
 export function visualizeMoveTarget({ pos, range }: MoveTarget, opts?: PolyStyle) {
   new RoomVisual(pos.roomName)

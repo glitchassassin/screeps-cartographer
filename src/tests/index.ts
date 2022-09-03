@@ -1,4 +1,4 @@
-import { preTick, reconcileTraffic } from 'lib';
+import { preTick, reconcileTraffic } from '../lib';
 import { scout } from './roles/scout';
 import { worker } from './roles/worker';
 import { runTestCases } from './testCases';

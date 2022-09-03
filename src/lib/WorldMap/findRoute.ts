@@ -1,4 +1,4 @@
-import { config } from 'config';
+import { config } from '../../config';
 import { isHighway, isSourceKeeperRoom } from './selectors';
 
 export interface FindRouteOpts extends Partial<RouteOptions> {

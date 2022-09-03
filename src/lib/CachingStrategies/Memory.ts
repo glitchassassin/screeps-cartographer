@@ -1,5 +1,5 @@
-import { config } from 'config';
 import { CachingStrategy } from '.';
+import { config } from '../../config';
 import { NumberSerializer } from './Serializers/Number';
 import { withSerializer } from './withSerializer';
 

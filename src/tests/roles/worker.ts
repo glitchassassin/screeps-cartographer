@@ -1,4 +1,4 @@
-import { moveTo } from 'lib';
+import { moveTo } from '../../lib';
 
 declare global {
   interface CreepMemory {

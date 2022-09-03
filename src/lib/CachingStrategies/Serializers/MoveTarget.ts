@@ -1,5 +1,5 @@
-import { MoveTarget, Serializer } from 'lib';
-import { packPos, unpackPos } from 'utils/packrat';
+import { MoveTarget, Serializer } from '../../';
+import { packPos, unpackPos } from '../../../utils/packrat';
 import { Codec } from '../../../utils/screeps-utf15';
 
 /**

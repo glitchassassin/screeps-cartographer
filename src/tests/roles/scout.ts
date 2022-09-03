@@ -1,5 +1,5 @@
-import { moveTo } from 'lib';
-import { packPos, packPosList } from 'utils/packrat';
+import { moveTo } from '../../lib';
+import { packPos, packPosList } from '../../utils/packrat';
 
 declare global {
   interface CreepMemory {

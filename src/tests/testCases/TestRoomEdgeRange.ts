@@ -1,4 +1,4 @@
-import { isExit, moveTo } from 'lib';
+import { isExit, moveTo } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 

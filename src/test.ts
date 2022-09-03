@@ -1,4 +1,4 @@
-import { runTestScenarios } from 'tests';
+import { runTestScenarios } from './tests';
 
 export const loop = () => {
   runTestScenarios();

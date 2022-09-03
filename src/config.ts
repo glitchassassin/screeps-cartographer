@@ -1,4 +1,4 @@
-import { MoveOpts } from 'lib';
+import { MoveOpts } from './lib';
 
 export const config = {
   DEFAULT_MOVE_OPTS: {
