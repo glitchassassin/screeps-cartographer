@@ -185,6 +185,18 @@ moveTo(
 );
 ```
 
+### Overriding Default Config
+
+You can import the config object and override default settings, if desired:
+
+```ts
+import { config } from 'screeps-cartographer';
+config.DEFAULT_MOVE_OPTS.routeCallback = room => {
+  if (Memory.rooms[room].isHostile) return Infinity;
+  return;
+};
+```
+
 ## Testing Cartographer
 
 Cartographer includes a super-minimal Screeps bot which will maintain a spawn and generate scouts to collect room intelligence. This allows roads to be generated and visualized for debugging purposes, and also enables integration tests to catch regressions.

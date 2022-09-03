@@ -24,12 +24,6 @@ export const config = {
     strokeWidth: 0.15,
     opacity: 0.1
   } as PolyStyle,
-  DEFAULT_FIND_ROUTE_OPTS: {
-    maxRooms: 64,
-    defaultRoomCost: 2,
-    highwayRoomCost: 1,
-    sourceKeeperRoomCost: 2
-  },
   MEMORY_CACHE_PATH: '_cg',
   MEMORY_CACHE_EXPIRATION_PATH: '_cge'
 };

@@ -1,33 +1,14 @@
+import { MoveOpts } from '../';
 import { config } from '../../config';
 import { isHighway, isSourceKeeperRoom } from './selectors';
-
-export interface FindRouteOpts extends Partial<RouteOptions> {
-  /**
-   * Enhance route with additional rooms up to the max.
-   * Max (and default) is 64)
-   */
-  maxRooms?: number;
-  /**
-   * Default cost for a room in findRoute callback
-   */
-  defaultRoomCost?: number;
-  /**
-   * Cost for a Source Keeper room in findRoute callback
-   */
-  sourceKeeperRoomCost?: number;
-  /**
-   * Cost for a highway room in findRoute callback
-   */
-  highwayRoomCost?: number;
-}
 
 /**
  * Uses findRoute to create a base route, then enhances
  * it by adding rooms (up to maxRooms) to improve pathfinding
  */
-export function findRoute(room1: string, room2: string, opts?: FindRouteOpts) {
+export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
   const actualOpts = {
-    ...config.DEFAULT_FIND_ROUTE_OPTS,
+    ...config.DEFAULT_MOVE_OPTS,
     ...opts
   };
   // Generate base route
@@ -54,7 +35,7 @@ export function findRoute(room1: string, room2: string, opts?: FindRouteOpts) {
   let rooms = [...route.map(({ room }) => room)];
   for (let i = 0; i < route.length - 1; i++) {
     // check if we've met our limit
-    if (rooms.length >= actualOpts.maxRooms) break;
+    if (rooms.length >= actualOpts.maxRooms!) break;
     if (!route[i].exit) break;
 
     // check for areas PathFinder might be able to optimize
@@ -74,7 +55,7 @@ export function findRoute(room1: string, room2: string, opts?: FindRouteOpts) {
       (route[i].exit === route[i + 1].exit || !route[i + 1].exit) &&
       (!route[i + 2]?.exit || route[i].exit === route[i + 2].exit)
     ) {
-      if (rooms.length >= actualOpts.maxRooms - 1) continue; // detour will take two rooms, ignore
+      if (rooms.length >= actualOpts.maxRooms! - 1) continue; // detour will take two rooms, ignore
       // Straight line for the next three rooms (or until route ends)
       // Check if there are exit tiles on both halves of the border
       const regions = exitTileRegions(route[i].room, route[i].exit!);
