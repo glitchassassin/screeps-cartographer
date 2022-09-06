@@ -6,8 +6,6 @@ import { packPos } from '../../utils/packrat';
 import { measure } from '../../utils/profiler';
 import { getMoveIntentRooms, getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
 
-const DEBUG = false;
-
 const keys = {
   RECONCILE_TRAFFIC_RAN: '_crr'
 };
@@ -23,6 +21,13 @@ export function reconciledRecently() {
 
 let efficiency: number[] = [];
 
+export interface ReconcileTrafficOpts {
+  /**
+   * Show debug visualizations for troubleshooting traffic
+   */
+  visualize?: boolean;
+}
+
 /**
  * Include this function in your main loop after all creep movement to enable traffic
  * management.
@@ -31,23 +36,23 @@ let efficiency: number[] = [];
  * Creeps will fall back to unmanaged movement if the reconcileTraffic is not executed
  * after two ticks.
  */
-export function reconcileTraffic() {
+export function reconcileTraffic(opts?: ReconcileTrafficOpts) {
   for (const room of getMoveIntentRooms()) {
     if (!Game.rooms[room]) continue;
-    reconcileTrafficByRoom(room);
+    reconcileTrafficByRoom(room, opts);
   }
   // log that traffic management is active
   MemoryCache.with(NumberSerializer).set(keys.RECONCILE_TRAFFIC_RAN, Game.time);
 }
 
-function reconcileTrafficByRoom(room: string) {
+function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
   const start = Game.cpu.getUsed();
   let moveTime = 0;
   const used = new Set<string>();
   const moveIntents = getMoveIntents(room);
 
   // visualize
-  if (DEBUG) {
+  if (opts?.visualize) {
     for (const { creep, targets, priority } of moveIntents.creep.values()) {
       targets.forEach(t => {
         if (t.isEqualTo(creep.pos)) {
@@ -69,7 +74,7 @@ function reconcileTrafficByRoom(room: string) {
       targets: [creep.pos, ...adjacentWalkablePositions(creep.pos, true)]
     });
 
-    if (DEBUG) creep.room.visual.circle(creep.pos, { radius: 1.5, stroke: 'red', fill: 'transparent ' });
+    if (opts?.visualize) creep.room.visual.circle(creep.pos, { radius: 1, stroke: 'red', fill: 'transparent ' });
   }
 
   // remove pullers as move targets
@@ -99,7 +104,7 @@ function reconcileTrafficByRoom(room: string) {
       // logCpu('getting prioritized intents');
 
       for (const intent of intents.values()) {
-        if (DEBUG) {
+        if (opts?.visualize) {
           intent.targets.forEach(t => {
             if (t.isEqualTo(intent.creep.pos)) {
               intent.creep.room.visual.circle(intent.creep.pos, {
@@ -135,7 +140,7 @@ function reconcileTrafficByRoom(room: string) {
 
         if (!targetPos) {
           // no movement options
-          if (DEBUG) {
+          if (opts?.visualize) {
             intent.creep.room.visual
               .line(
                 intent.creep.pos.x - 0.5,
@@ -160,7 +165,7 @@ function reconcileTrafficByRoom(room: string) {
         intent.resolved = true;
         // logCpu('resolving intent');
 
-        if (DEBUG) intent.creep.room.visual.line(intent.creep.pos, targetPos, { color: 'green', width: 0.5 });
+        if (opts?.visualize) intent.creep.room.visual.line(intent.creep.pos, targetPos, { color: 'green', width: 0.5 });
 
         // remove pos from other intents targeting the same position
         const posKey = packPos(targetPos);
