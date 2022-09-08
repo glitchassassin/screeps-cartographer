@@ -31,7 +31,7 @@ export function generatePath(
         rooms = route;
       }
     }
-    console.log('generated path from', origin.roomName, 'to', targetRooms, ':', rooms);
+    // console.log('generated path from', origin.roomName, 'to', targetRooms, ':', rooms);
   }
   // generate path
   const result = PathFinder.search(origin, targets, {
