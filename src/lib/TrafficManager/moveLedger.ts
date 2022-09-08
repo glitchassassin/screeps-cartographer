@@ -62,6 +62,9 @@ export function registerMove(intent: MoveIntent, pulled = false) {
   }
   intent.targetCount ??= intent.targets.length;
   const indexes = getMoveIntents(intent.creep.pos.roomName);
+  // cancel old intent, if needed
+  cancelMove(indexes.creep.get(intent.creep));
+  // register new one
   indexes.creep.set(intent.creep, intent);
   const byPriority = indexes.priority.get(intent.priority) ?? new Map();
   indexes.priority.set(intent.priority, byPriority);
@@ -76,6 +79,21 @@ export function registerMove(intent: MoveIntent, pulled = false) {
   }
   if (intent.targets.length && intent.targets[0].isEqualTo(intent.creep.pos)) {
     indexes.prefersToStay.add(packPos(intent.creep.pos));
+  }
+}
+
+/**
+ * Register a move intent (adds to a couple indexes for quick lookups)
+ */
+export function cancelMove(intent?: MoveIntent) {
+  if (!intent) return;
+  intent.targetCount ??= intent.targets.length;
+  const indexes = getMoveIntents(intent.creep.pos.roomName);
+  indexes.creep.delete(intent.creep);
+  indexes.priority.get(intent.priority)?.get(intent.targets.length)?.delete(intent.creep);
+  for (const target of intent.targets) {
+    const key = packPos(target);
+    indexes.targets.get(key)?.delete(intent.creep);
   }
 }
 

@@ -26,6 +26,6 @@ export const creepIsStuck = (creep: Creep, stuckLimit: number) => {
     return false;
   }
 
-  // true if creep has been here (with no fatigue) for longer than Game.time
-  return lastTime + stuckLimit > Game.time;
+  // true if creep has been here (with no fatigue) for longer than stuckLimit
+  return lastTime + stuckLimit < Game.time;
 };
