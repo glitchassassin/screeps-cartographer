@@ -70,6 +70,11 @@ export interface MoveOpts extends PathFinderOpts {
    */
   highwayRoomCost?: number;
   /**
+   * The maximum allowed pathfinding operations per room (if maxOps is higher for a short path, PathFinder will use the lower).
+   * You can limit CPU time used for the search based on ratio 1 op ~ 0.001 CPU. The default value is 2000.
+   */
+  maxOpsPerRoom?: number;
+  /**
    * This callback works like the builtin `findRoute` and will override
    * the default values for highway/source keeper room cost unless you
    * return `undefined`.

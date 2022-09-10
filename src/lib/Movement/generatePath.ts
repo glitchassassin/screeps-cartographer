@@ -6,6 +6,7 @@ export interface GeneratePathOpts extends PathFinderOpts {
   avoidCreeps?: boolean;
   avoidObstacleStructures?: boolean;
   roadCost?: number;
+  maxOpsPerRoom?: number;
 }
 
 /**
@@ -36,6 +37,7 @@ export function generatePath(
   // generate path
   const result = PathFinder.search(origin, targets, {
     ...opts,
+    maxOps: Math.min(opts.maxOps ?? 100000, (opts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
     roomCallback(room) {
       if (rooms && !rooms.includes(room)) return false; // outside route search space
       let cm = opts.roomCallback?.(room);

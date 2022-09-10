@@ -15,7 +15,8 @@ export const config = {
     highwayRoomCost: 1,
     sourceKeeperRoomCost: 2,
     maxRooms: 64,
-    maxOps: 100000
+    maxOps: 100000,
+    maxOpsPerRoom: 2000
   } as MoveOpts,
   DEFAULT_VISUALIZE_OPTS: {
     fill: 'transparent',
