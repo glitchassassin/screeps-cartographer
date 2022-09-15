@@ -1,7 +1,7 @@
 import { preTick, reconcileTraffic } from '../lib';
 import { scout } from './roles/scout';
 import { worker } from './roles/worker';
-import { runTestCases } from './testCases';
+import { runTestCases, testCasesComplete } from './testCases';
 
 export const runTestScenarios = () => {
   for (const name in Memory.creeps) {
@@ -21,7 +21,7 @@ export const runTestScenarios = () => {
   }
   if (!spawning) runTestCases();
 
-  reconcileTraffic();
+  reconcileTraffic({ visualize: true });
 
   visualizeIntel();
   // profileReport();
@@ -44,7 +44,7 @@ const spawn = (room: string) => {
     // spawn a worker
     worker.spawn(spawn);
     return true;
-  } else if (creeps.filter(name => name.includes('SCOUT')).length < 6) {
+  } else if (testCasesComplete && creeps.filter(name => name.includes('SCOUT')).length < 6) {
     // spawn a scout
     scout.spawn(spawn);
     return true;

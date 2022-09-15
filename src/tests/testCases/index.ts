@@ -2,6 +2,7 @@ import { adjacentWalkablePositions, calculateNearbyPositions } from '../../lib/M
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 import { TestCachedPaths } from './TestCachedPaths';
+import { TestDeadlock } from './TestDeadlock';
 import { TestFlee } from './TestFlee';
 import { TestPriority } from './TestPriority';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
@@ -10,7 +11,8 @@ import { TestStuck } from './TestStuck';
 import { TestSwarm } from './TestSwarm';
 import { TestTrain } from './TestTrain';
 
-export const testCases = [
+export const allTestCases = [
+  new TestDeadlock(),
   new TestSwarm(),
   new TestFlee(),
   new TestStuck(),
@@ -20,9 +22,11 @@ export const testCases = [
   new TestTrain(),
   new TestRoomEdgeRange()
 ];
+export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();
-let reported = false;
 let initialized = false;
+
+export let testCasesComplete = false;
 
 export function runTestCases() {
   if (!initialized) {
@@ -30,19 +34,20 @@ export function runTestCases() {
     plotTestCases();
     initialized = true;
   }
-  if (!reported && testResults.size === testCases.length) {
+  if (!testCasesComplete && testResults.size === testCases.length) {
     // tests complete
     console.log('-=< Tests complete >=-');
     for (const [test, result] of testResults) {
       console.log(`  ${test}: ${result}`);
     }
-    reported = true;
+    testCasesComplete = true;
   }
   for (const test of testCases) {
     if (testResults.has(test)) continue;
     const result = test.run();
     if (result === TestResult.FAIL && test.retries > 0) {
       console.log(`Retrying: ${test}`);
+      test.reset();
       continue;
     }
     if (result !== TestResult.PENDING) {

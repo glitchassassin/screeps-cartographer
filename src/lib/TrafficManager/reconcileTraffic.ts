@@ -103,7 +103,18 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
       if (!intents.size) priority.delete(minPositionCount);
       // logCpu('getting prioritized intents');
 
-      for (const intent of intents.values()) {
+      const intentStack = [...intents.values()];
+
+      while (intentStack.length) {
+        const intent = intentStack.shift();
+        if (!intent) break;
+        if (intent.resolved) {
+          // a swapping creep will sometimes end up on the stack twice.
+          // if its move has already been resolved, ignore it
+          intents.delete(intent.creep);
+          continue;
+        }
+        // for (const intent of [...intents.values()]) {
         if (opts?.visualize) {
           intent.targets.forEach(t => {
             if (t.isEqualTo(intent.creep.pos)) {
@@ -181,6 +192,32 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
           updateIntentTargetCount(sameTargetIntent, oldCount, sameTargetIntent.targetCount);
         }
         // logCpu('removing move position from other intents');
+
+        // if a creep in the destination position is moving to this position, override
+        // any other intents moving to this position
+        if (!targetPos.isEqualTo(intent.creep.pos) && !moveIntents.pullers.has(intent.creep)) {
+          const swapPos = packPos(intent.creep.pos);
+          const movingHereIntents = [...(moveIntents.targets.get(swapPos)?.values() ?? [])].filter(
+            i => i !== intent && i.targets.length < 2
+          );
+          const swapCreep = movingHereIntents.find(
+            i => !i.resolved && targetPos?.isEqualTo(i.creep.pos) && !moveIntents.pullers.has(i.creep)
+          );
+
+          if (swapCreep) {
+            swapCreep.creep.room.visual.circle(swapCreep.creep.pos, { radius: 0.2, fill: 'green' });
+            // override previously resolved intents
+            movingHereIntents
+              .filter(i => i.resolved)
+              .forEach(i => {
+                i.creep.room.visual.circle(i.creep.pos, { radius: 0.2, fill: 'red' });
+                i.creep.move(i.creep);
+              });
+            used.delete(swapPos);
+            // handle swapCreep next
+            intentStack.unshift(swapCreep);
+          }
+        }
       }
     }
   }
