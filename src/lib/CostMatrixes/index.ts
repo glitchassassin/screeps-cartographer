@@ -36,7 +36,7 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
         }
       }
       if (opts.roadCost) {
-        if (s instanceof StructureRoad && cm.get(s.pos.x, s.pos.y) !== 255) {
+        if (s instanceof StructureRoad && cm.get(s.pos.x, s.pos.y) == 0) {
           cm.set(s.pos.x, s.pos.y, opts.roadCost);
         }
       }
