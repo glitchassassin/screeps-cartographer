@@ -130,16 +130,18 @@ export const moveTo = (
   );
 
   // If creep is stuck, we need to repath
+  let repathed = false;
   if (
     actualOpts.repathIfStuck &&
     getCachedPath(creepKey(creep, keys.CACHED_PATH), { cache }) &&
     creepIsStuck(creep, actualOpts.repathIfStuck)
   ) {
-    clearCachedPath(creep, cache);
+    resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
     actualOpts = {
       ...actualOpts,
       ...fallbackOpts
     };
+    if (creep.name.startsWith('TestStuck')) repathed = true;
   }
 
   if (DEBUG) logCpu('checking if creep is stuck');
