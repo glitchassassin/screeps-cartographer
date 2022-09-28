@@ -78,6 +78,10 @@ function plotTestCases() {
           p =>
             p.terrain !== 'wall' &&
             !p.structure &&
+            p.x > 0 &&
+            p.x < 49 &&
+            p.y > 0 &&
+            p.y < 49 &&
             !plotted.some(
               t =>
                 p.x >= t.testRegionOrigin!.x &&
