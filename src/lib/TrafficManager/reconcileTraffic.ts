@@ -205,12 +205,13 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
           );
 
           if (swapCreep) {
-            swapCreep.creep.room.visual.circle(swapCreep.creep.pos, { radius: 0.2, fill: 'green' });
+            if (opts?.visualize)
+              swapCreep.creep.room.visual.circle(swapCreep.creep.pos, { radius: 0.2, fill: 'green' });
             // override previously resolved intents
             movingHereIntents
               .filter(i => i.resolved)
               .forEach(i => {
-                i.creep.room.visual.circle(i.creep.pos, { radius: 0.2, fill: 'red' });
+                if (opts?.visualize) i.creep.room.visual.circle(i.creep.pos, { radius: 0.2, fill: 'red' });
                 i.creep.move(i.creep);
               });
             used.delete(swapPos);
