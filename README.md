@@ -1,5 +1,3 @@
-# ARCHIVED - OPENED ONLY TO FIX SOME BUGS
-
 [![docs](https://img.shields.io/badge/API-Docs-green)](https://glitchassassin.github.io/screeps-cartographer/)
 
 # screeps-cartographer
