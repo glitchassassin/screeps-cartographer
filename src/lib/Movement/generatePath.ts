@@ -43,11 +43,7 @@ export function generatePath(
       let cm = opts.roomCallback?.(room);
       if (cm === false) return cm;
       const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
-      return mutateCostMatrix(cloned, room, {
-        avoidCreeps: opts.avoidCreeps,
-        avoidObstacleStructures: opts.avoidObstacleStructures,
-        roadCost: opts.roadCost
-      });
+      return mutateCostMatrix(cloned, room, opts);
     }
   });
   if (!result.path.length) return undefined;
