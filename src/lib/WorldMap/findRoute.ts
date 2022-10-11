@@ -44,7 +44,11 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
     if (route[i].exit !== route[i + 1].exit) {
       const detour = Game.map.describeExits(route[i].room)[route[i + 1].exit!];
 
-      if (detour && Game.map.findExit(detour, route[i + 1].room) > 0 && actualOpts.routeCallback?.(detour, route[i].room) !== Infinity) {
+      if (
+        detour &&
+        Game.map.findExit(detour, route[i + 1].room) > 0 &&
+        actualOpts.routeCallback?.(detour, route[i].room) !== Infinity
+      ) {
         // detour room is connected
         rooms.push(detour);
       }
@@ -79,9 +83,13 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
       // check detour rooms for continuity
       const detour1 = Game.map.describeExits(route[i].room)[detour];
       const detour2 = Game.map.describeExits(route[i + 1].room)[detour];
-      if (detour1 && detour2 && Game.map.findExit(detour1, detour2) > 0 &&
+      if (
+        detour1 &&
+        detour2 &&
+        Game.map.findExit(detour1, detour2) > 0 &&
         actualOpts.routeCallback?.(detour1, route[i].room) !== Infinity &&
-        actualOpts.routeCallback?.(detour2, route[i + 1].room) !== Infinity) {
+        actualOpts.routeCallback?.(detour2, route[i + 1].room) !== Infinity
+      ) {
         // detour rooms are connected
         rooms.push(detour1, detour2);
       }
