@@ -56,7 +56,7 @@ export const moveTo = (
   creep: Creep,
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
   opts?: MoveOpts,
-  fallbackOpts: MoveOpts = { avoidCreeps: true }
+  fallbackOpts: MoveOpts = { avoidCreeps: true, routeWithAdjacentRooms: true }
 ) => {
   if (DEBUG) logCpuStart();
   // map defaults onto opts

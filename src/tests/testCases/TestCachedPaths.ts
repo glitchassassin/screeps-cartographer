@@ -1,4 +1,4 @@
-import { cachePath, CachingStrategies, followPath, getCachedPath, resetCachedPath } from '../../lib';
+import { cachePath, CachingStrategies, getCachedPath, moveByPath, resetCachedPath } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 
@@ -44,19 +44,19 @@ export class TestCachedPaths extends CartographerTestCase {
     new RoomVisual(this.spawn.room.name).poly(path1, { stroke: 'magenta' }).poly(path2, { stroke: 'cyan' });
     if (this.phase === 0) {
       if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
-      followPath(this.creeps.c1, 'controller1', { cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller1', { cache: CachingStrategies.HeapCache });
     }
     if (this.phase === 1) {
       if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
-      followPath(this.creeps.c1, 'controller2', { reverse: true, cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller2', { reverse: true, cache: CachingStrategies.HeapCache });
     }
     if (this.phase === 2) {
       if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
-      followPath(this.creeps.c1, 'controller2', { cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller2', { cache: CachingStrategies.HeapCache });
     }
     if (this.phase === 3) {
       if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
-      followPath(this.creeps.c1, 'controller1', { reverse: true, cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller1', { reverse: true, cache: CachingStrategies.HeapCache });
     }
 
     if (this.phase === 4) {

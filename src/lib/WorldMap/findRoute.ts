@@ -32,11 +32,17 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
   }
 
   // Enhance route
-  let rooms = [...route.map(({ room }) => room)];
+  let rooms = new Set(route.map(({ room }) => room));
   for (let i = 0; i < route.length - 1; i++) {
     // check if we've met our limit
-    if (rooms.length >= actualOpts.maxRooms!) break;
+    if (rooms.size >= actualOpts.maxRooms!) break;
     if (!route[i].exit) break;
+
+    if (opts?.routeWithAdjacentRooms) {
+      // Add all connected adjacent rooms
+      Object.values(Game.map.describeExits(route[i].room)).forEach(room => rooms.add(room));
+      continue;
+    }
 
     // check for areas PathFinder might be able to optimize
 
@@ -50,7 +56,7 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
         actualOpts.routeCallback?.(detour, route[i].room) !== Infinity
       ) {
         // detour room is connected
-        rooms.push(detour);
+        rooms.add(detour);
       }
     }
 
@@ -60,7 +66,7 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
       (route[i].exit === route[i + 1].exit || !route[i + 1].exit) &&
       (!route[i + 2]?.exit || route[i].exit === route[i + 2].exit)
     ) {
-      if (rooms.length >= actualOpts.maxRooms! - 1) continue; // detour will take two rooms, ignore
+      if (rooms.size >= actualOpts.maxRooms! - 1) continue; // detour will take two rooms, ignore
       // Straight line for the next three rooms (or until route ends)
       // Check if there are exit tiles on both halves of the border
       const regions = exitTileRegions(route[i].room, route[i].exit!);
@@ -91,11 +97,12 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
         actualOpts.routeCallback?.(detour2, route[i + 1].room) !== Infinity
       ) {
         // detour rooms are connected
-        rooms.push(detour1, detour2);
+        rooms.add(detour1);
+        rooms.add(detour2);
       }
     }
   }
-  return [...new Set(rooms)];
+  return [...rooms];
 }
 
 function exitTileRegions(room: string, exit: ExitConstant): [boolean, boolean] {
