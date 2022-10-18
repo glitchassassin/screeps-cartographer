@@ -1,3 +1,4 @@
+import { memoize } from 'lib/Utils/memoize';
 import { MoveOpts } from '../';
 import { config } from '../../config';
 import { isHighway, isSourceKeeperRoom } from './selectors';
@@ -11,15 +12,21 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
     ...config.DEFAULT_MOVE_OPTS,
     ...opts
   };
-  // Generate base route
-  let generatedRoute = Game.map.findRoute(room1, room2, {
-    routeCallback: (roomName: string, fromRoomName: string) => {
+
+  const memoizedRouteCallback = memoize(
+    (roomName, fromRoomName) => roomName + fromRoomName,
+    (roomName: string, fromRoomName: string): number | undefined => {
       const result = actualOpts.routeCallback?.(roomName, fromRoomName);
       if (result !== undefined) return result;
       if (isHighway(roomName)) return actualOpts.highwayRoomCost;
       if (isSourceKeeperRoom(roomName)) return actualOpts.sourceKeeperRoomCost;
       return actualOpts.defaultRoomCost;
     }
+  );
+
+  // Generate base route
+  let generatedRoute = Game.map.findRoute(room1, room2, {
+    routeCallback: memoizedRouteCallback
   });
   if (generatedRoute === ERR_NO_PATH) return undefined;
   // map from "take this exit to this room" to "in this room, take this exit"
@@ -33,6 +40,7 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
 
   // Enhance route
   let rooms = new Set(route.map(({ room }) => room));
+  let blockedRooms = new Set<string>();
   for (let i = 0; i < route.length - 1; i++) {
     // check if we've met our limit
     if (rooms.size >= actualOpts.maxRooms!) break;
@@ -40,7 +48,9 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
 
     if (opts?.routeWithAdjacentRooms) {
       // Add all connected adjacent rooms
-      Object.values(Game.map.describeExits(route[i].room)).forEach(room => rooms.add(room));
+      Object.values(Game.map.describeExits(route[i].room)).forEach(room => {
+        if (memoizedRouteCallback(room, route[i].room) !== Infinity) rooms.add(room);
+      });
       continue;
     }
 
@@ -53,7 +63,7 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
       if (
         detour &&
         Game.map.findExit(detour, route[i + 1].room) > 0 &&
-        actualOpts.routeCallback?.(detour, route[i].room) !== Infinity
+        memoizedRouteCallback(detour, route[i].room) !== Infinity
       ) {
         // detour room is connected
         rooms.add(detour);
@@ -93,8 +103,8 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
         detour1 &&
         detour2 &&
         Game.map.findExit(detour1, detour2) > 0 &&
-        actualOpts.routeCallback?.(detour1, route[i].room) !== Infinity &&
-        actualOpts.routeCallback?.(detour2, route[i + 1].room) !== Infinity
+        memoizedRouteCallback(detour1, route[i].room) !== Infinity &&
+        memoizedRouteCallback(detour2, route[i + 1].room) !== Infinity
       ) {
         // detour rooms are connected
         rooms.add(detour1);
