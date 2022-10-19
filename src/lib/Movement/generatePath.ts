@@ -46,7 +46,7 @@ export function generatePath(
       return mutateCostMatrix(cloned, room, opts);
     }
   });
-  if (!result.path.length) return undefined;
+  if (!result.path.length || result.incomplete) return undefined;
 
   return result.path;
 }

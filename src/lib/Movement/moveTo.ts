@@ -149,6 +149,8 @@ export const moveTo = (
   // generate cached path, if needed
   const path = cachePath(creepKey(creep, keys.CACHED_PATH), creep.pos, normalizedTargets, { ...actualOpts, cache });
 
+  if (!path) return ERR_NO_PATH;
+
   if (DEBUG) logCpu('generating cached path');
 
   // move to any viable target square, if path is nearly done

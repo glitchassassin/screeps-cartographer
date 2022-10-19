@@ -31,7 +31,13 @@ export const worker = {
       const source = Game.getObjectById(creep.memory.harvestSource);
       if (!source) return;
 
-      moveTo(creep, source, { visualizePathStyle: { stroke: 'cyan' } });
+      const result = moveTo(creep, source, { visualizePathStyle: { stroke: 'cyan' } });
+      if (result === ERR_NO_PATH) {
+        const sources = Game.rooms[creep.memory.room]
+          .find(FIND_SOURCES_ACTIVE)
+          .filter(s => s.id !== creep.memory.harvestSource);
+        creep.memory.harvestSource = sources[0]?.id;
+      }
       creep.harvest(source);
 
       if (creep.store.getFreeCapacity() === 0) {
