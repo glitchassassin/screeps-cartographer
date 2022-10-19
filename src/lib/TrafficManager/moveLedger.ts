@@ -13,6 +13,7 @@ const generateIndexes = () => ({
   priority: new Map<number, Map<number, Map<Creep, MoveIntent>>>(),
   targets: new Map<string, Map<Creep, MoveIntent>>(),
   pullers: new Set<Creep>(),
+  pullees: new Set<Creep>(),
   prefersToStay: new Set<string>()
 });
 let _indexes = new Map<string, ReturnType<typeof generateIndexes>>();
@@ -48,9 +49,10 @@ export function getMoveIntentRooms() {
  * Register a pull intent (used to avoid breaking trains of
  * pulled creeps)
  */
-export function registerPull(puller: Creep) {
+export function registerPull(puller: Creep, pullee: Creep) {
   const intents = getMoveIntents(puller.pos.roomName);
   intents.pullers.add(puller);
+  intents.pullees.add(pullee);
 }
 
 /**

@@ -5,6 +5,7 @@ import { TestCachedPaths } from './TestCachedPaths';
 import { TestDeadlock } from './TestDeadlock';
 import { TestFlee } from './TestFlee';
 import { TestPriority } from './TestPriority';
+import { TestPulling } from './TestPulling';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
 import { TestShove } from './TestShove';
 import { TestStuck } from './TestStuck';
@@ -20,7 +21,8 @@ export const allTestCases = [
   new TestPriority(),
   new TestShove(),
   new TestTrain(),
-  new TestRoomEdgeRange()
+  new TestRoomEdgeRange(),
+  new TestPulling()
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();

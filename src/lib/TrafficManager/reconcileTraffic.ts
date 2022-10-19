@@ -66,7 +66,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
 
   // Set move intents for shove targets
   for (const creep of Game.rooms[room].find(FIND_MY_CREEPS)) {
-    if (moveIntents.creep.has(creep)) continue;
+    if (moveIntents.creep.has(creep) || moveIntents.pullees.has(creep) || moveIntents.pullers.has(creep)) continue;
 
     registerMove({
       creep,
@@ -136,7 +136,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         let targetPos: RoomPosition | undefined = undefined;
         for (const target of intent.targets) {
           const p = packPos(target);
-          if (used.has(p)) continue; // a creep is already moving here
+          if (used.has(p) && !(intent.creep.pos.isEqualTo(target) && moveIntents.pullers.has(intent.creep))) continue; // a creep is already moving here
           if (intent.creep.pos.isEqualTo(target) || !moveIntents.prefersToStay.has(p)) {
             // best case - no other creep prefers to stay here
             targetPos = target;
