@@ -3,20 +3,13 @@ import { MoveTarget } from '../';
 import { mutateCostMatrix } from '../CostMatrixes';
 import { findRoute } from '../WorldMap/findRoute';
 
-export interface GeneratePathOpts extends PathFinderOpts {
-  avoidCreeps?: boolean;
-  avoidObstacleStructures?: boolean;
-  roadCost?: number;
-  maxOpsPerRoom?: number;
-}
-
 /**
  * Generates a path with PathFinder
  */
 export function generatePath(
   origin: RoomPosition,
   targets: MoveTarget[],
-  opts: GeneratePathOpts
+  opts: MoveToOpts
 ): RoomPosition[] | undefined {
   // Generate full opts object
   const actualOpts = {
