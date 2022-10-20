@@ -1,5 +1,5 @@
 import { config } from 'config';
-import { MoveTarget } from '../';
+import { MoveOpts, MoveTarget } from '../';
 import { mutateCostMatrix } from '../CostMatrixes';
 import { findRoute } from '../WorldMap/findRoute';
 
@@ -9,7 +9,7 @@ import { findRoute } from '../WorldMap/findRoute';
 export function generatePath(
   origin: RoomPosition,
   targets: MoveTarget[],
-  opts: MoveToOpts
+  opts: MoveOpts
 ): RoomPosition[] | undefined {
   // Generate full opts object
   const actualOpts = {
