@@ -1,3 +1,4 @@
+import { config } from 'config';
 import { MoveTarget } from '../';
 import { mutateCostMatrix } from '../CostMatrixes';
 import { findRoute } from '../WorldMap/findRoute';
@@ -17,6 +18,11 @@ export function generatePath(
   targets: MoveTarget[],
   opts: GeneratePathOpts
 ): RoomPosition[] | undefined {
+  // Generate full opts object
+  const actualOpts = {
+    ...config.DEFAULT_MOVE_OPTS,
+    ...opts
+  };
   // check if we need a route to limit search space
   const exits = Object.values(Game.map.describeExits(origin.roomName));
   let rooms: string[] | undefined = undefined;
@@ -27,7 +33,7 @@ export function generatePath(
       [] as string[]
     );
     for (const room of targetRooms) {
-      const route = findRoute(origin.roomName, room, opts);
+      const route = findRoute(origin.roomName, room, actualOpts);
       if (route && (!rooms || route.length < rooms.length)) {
         rooms = route;
       }
@@ -36,14 +42,14 @@ export function generatePath(
   }
   // generate path
   const result = PathFinder.search(origin, targets, {
-    ...opts,
-    maxOps: Math.min(opts.maxOps ?? 100000, (opts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
+    ...actualOpts,
+    maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
     roomCallback(room) {
       if (rooms && !rooms.includes(room)) return false; // outside route search space
-      let cm = opts.roomCallback?.(room);
+      let cm = actualOpts.roomCallback?.(room);
       if (cm === false) return cm;
       const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
-      return mutateCostMatrix(cloned, room, opts);
+      return mutateCostMatrix(cloned, room, actualOpts);
     }
   });
   if (!result.path.length || result.incomplete) return undefined;
