@@ -4,7 +4,7 @@ import { mutateCostMatrix } from '../CostMatrixes';
 import { findRoute } from '../WorldMap/findRoute';
 
 /**
- * Generates a path with PathFinder
+ * Generates a path with PathFinder.
  */
 export function generatePath(
   origin: RoomPosition,
@@ -19,7 +19,7 @@ export function generatePath(
   // check if we need a route to limit search space
   const exits = Object.values(Game.map.describeExits(origin.roomName));
   let rooms: string[] | undefined = undefined;
-  if (!targets.some(({ pos }) => pos.roomName === origin.roomName || exits.includes(pos.roomName))) {
+  if (!targets.some(({ pos }) => pos.roomName === origin.roomName)) {
     // if there are multiple rooms in `targets`, pick the cheapest route
     const targetRooms = targets.reduce(
       (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
