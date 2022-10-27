@@ -6,6 +6,7 @@ import { reconciledRecently } from '../TrafficManager/reconcileTraffic';
  * run recently, or else falls back to a regular move
  */
 export function move(creep: Creep | PowerCreep, targets: RoomPosition[], priority = 1) {
+  if (!creep.pos) return ERR_INVALID_ARGS;
   if (reconciledRecently()) {
     // Traffic manager is running
     registerMove({

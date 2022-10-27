@@ -66,6 +66,10 @@ export const moveTo = (
   fallbackOpts: MoveOpts = { avoidCreeps: true }
 ) => {
   if (DEBUG) logCpuStart();
+
+  // unspawned power creeps have undefined pos
+  if (!creep.pos) return ERR_INVALID_ARGS;
+
   // map defaults onto opts
   let actualOpts: MoveOpts = {
     ...config.DEFAULT_MOVE_OPTS,

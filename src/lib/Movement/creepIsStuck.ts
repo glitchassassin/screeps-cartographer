@@ -11,6 +11,8 @@ const keys = {
  * but has not moved in `stuckLimit` ticks
  */
 export const creepIsStuck = (creep: Creep | PowerCreep, stuckLimit: number) => {
+  // unspawned power creeps have undefined pos
+  if (!creep.pos) return false;
   if ('fatigue' in creep && creep.fatigue > 0) return false;
 
   // get last position

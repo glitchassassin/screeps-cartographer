@@ -95,6 +95,9 @@ export interface MoveByCachedPathOpts extends MoveOpts {
 export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveByCachedPathOpts) {
   const cache = opts?.cache ?? MemoryCache;
   const path = cache.with(PositionListSerializer).get(cachedPathKey(key));
+
+  // unspawned power creeps have undefined pos
+  if (!creep.pos) return ERR_INVALID_ARGS;
   if (!path) return ERR_NO_PATH;
 
   // check if move is done
