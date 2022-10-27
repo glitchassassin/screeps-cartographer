@@ -41,18 +41,11 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
   // Enhance route
   let rooms = new Set(route.map(({ room }) => room));
   let blockedRooms = new Set<string>();
+  const maxRooms = actualOpts.maxRooms!;
   for (let i = 0; i < route.length - 1; i++) {
     // check if we've met our limit
-    if (rooms.size >= actualOpts.maxRooms!) break;
+    if (rooms.size >= maxRooms) break;
     if (!route[i].exit) break;
-
-    if (opts?.routeWithAdjacentRooms) {
-      // Add all connected adjacent rooms
-      Object.values(Game.map.describeExits(route[i].room)).forEach(room => {
-        if (memoizedRouteCallback(room, route[i].room) !== Infinity) rooms.add(room);
-      });
-      continue;
-    }
 
     // check for areas PathFinder might be able to optimize
 
@@ -109,6 +102,20 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
         // detour rooms are connected
         rooms.add(detour1);
         rooms.add(detour2);
+      }
+    }
+
+    // now floodfill adjoining rooms, up to maxRooms
+    const frontier = [...rooms];
+    while (rooms.size < maxRooms) {
+      const room = frontier.shift();
+      if (!room) break;
+      for (const adjacentRoom of Object.values(Game.map.describeExits(room))) {
+        if (rooms.has(adjacentRoom)) continue;
+        if (memoizedRouteCallback(adjacentRoom, room) !== Infinity) {
+          rooms.add(adjacentRoom);
+          frontier.push(adjacentRoom);
+        }
       }
     }
   }

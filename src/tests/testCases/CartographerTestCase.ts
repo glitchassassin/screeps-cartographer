@@ -23,8 +23,11 @@ export abstract class CartographerTestCase {
   // spawn lookup
   _spawn: Id<StructureSpawn>;
   get spawn() {
-    const spawn = Game.getObjectById(this._spawn);
-    if (!spawn) throw new Error(`Spawn not found: ${this._spawn}`);
+    const spawn = Game.getObjectById(this._spawn) ?? Object.values(Game.spawns)[0];
+    this._spawn = spawn.id;
+    if (!spawn) {
+      throw new Error('Spawn not found: ' + this._spawn);
+    }
     return spawn;
   }
 

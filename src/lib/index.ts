@@ -80,12 +80,6 @@ export interface MoveOpts extends PathFinderOpts {
    * return `undefined`.
    */
   routeCallback?: (roomName: string, fromRoomName: string) => number | undefined;
-  /**
-   * If the found route is failing due to blocked paths (can happen with source-keeper avoidance), a
-   * better path may be found by adding all adjacent (connected) rooms to the route instead of just using
-   * the heuristic. This may make pathfinding more expensive, so by default is used as a fallback when stuck
-   */
-  routeWithAdjacentRooms?: boolean;
 }
 
 export * from './CachingStrategies';
