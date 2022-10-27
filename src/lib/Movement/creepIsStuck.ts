@@ -10,8 +10,8 @@ const keys = {
  * Tracks a creep's position and returns true if it has no fatigue
  * but has not moved in `stuckLimit` ticks
  */
-export const creepIsStuck = (creep: Creep, stuckLimit: number) => {
-  if (creep.fatigue > 0) return false;
+export const creepIsStuck = (creep: Creep | PowerCreep, stuckLimit: number) => {
+  if ('fatigue' in creep && creep.fatigue > 0) return false;
 
   // get last position
   const lastPos = HeapCache.get(creepKey(creep, keys.LAST_POSITION));

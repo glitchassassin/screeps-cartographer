@@ -17,6 +17,10 @@ declare global {
     _cmvp?: string;
     _cmvt?: string;
   }
+  interface PowerCreepMemory {
+    _cmvp?: string;
+    _cmvt?: string;
+  }
 }
 
 const keys = {
@@ -38,7 +42,10 @@ const optCacheFields: (keyof MoveOpts)[] = [
 /**
  * Clears all data for a cached path (useful to force a repath)
  */
-export function clearCachedPath(creep: Creep, cache: GenericCachingStrategy<any> = CachingStrategies.HeapCache) {
+export function clearCachedPath(
+  creep: Creep | PowerCreep,
+  cache: GenericCachingStrategy<any> = CachingStrategies.HeapCache
+) {
   resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
   cache.delete(creepKey(creep, keys.CACHED_PATH_TARGETS));
   cache.delete(creepKey(creep, keys.CACHED_PATH_OPTS));
@@ -53,7 +60,7 @@ export function clearCachedPath(creep: Creep, cache: GenericCachingStrategy<any>
  * them, for example.
  */
 export const moveTo = (
-  creep: Creep,
+  creep: Creep | PowerCreep,
   targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
   opts?: MoveOpts,
   fallbackOpts: MoveOpts = { avoidCreeps: true }

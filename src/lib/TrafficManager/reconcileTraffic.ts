@@ -56,9 +56,13 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
     for (const { creep, targets, priority } of moveIntents.creep.values()) {
       targets.forEach(t => {
         if (t.isEqualTo(creep.pos)) {
-          creep.room.visual.circle(creep.pos, { radius: 0.5, stroke: 'orange', fill: 'transparent' });
+          Game.rooms[creep.pos.roomName].visual.circle(creep.pos, {
+            radius: 0.5,
+            stroke: 'orange',
+            fill: 'transparent'
+          });
         } else {
-          creep.room.visual.line(creep.pos, t, { color: 'orange' });
+          Game.rooms[creep.pos.roomName].visual.line(creep.pos, t, { color: 'orange' });
         }
       });
     }
@@ -74,7 +78,8 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
       targets: [creep.pos, ...adjacentWalkablePositions(creep.pos, true)]
     });
 
-    if (opts?.visualize) creep.room.visual.circle(creep.pos, { radius: 1, stroke: 'red', fill: 'transparent ' });
+    if (opts?.visualize)
+      Game.rooms[creep.pos.roomName].visual.circle(creep.pos, { radius: 1, stroke: 'red', fill: 'transparent ' });
   }
 
   // remove pullers as move targets
@@ -118,7 +123,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         if (opts?.visualize) {
           intent.targets.forEach(t => {
             if (t.isEqualTo(intent.creep.pos)) {
-              intent.creep.room.visual.circle(intent.creep.pos, {
+              Game.rooms[intent.creep.pos.roomName].visual.circle(intent.creep.pos, {
                 radius: 0.5,
                 stroke: 'yellow',
                 strokeWidth: 0.2,
@@ -126,7 +131,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
                 opacity: 0.2
               });
             } else {
-              intent.creep.room.visual.line(intent.creep.pos, t, { color: 'yellow', width: 0.2 });
+              Game.rooms[intent.creep.pos.roomName].visual.line(intent.creep.pos, t, { color: 'yellow', width: 0.2 });
             }
           });
         }
@@ -152,7 +157,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         if (!targetPos) {
           // no movement options
           if (opts?.visualize) {
-            intent.creep.room.visual
+            Game.rooms[intent.creep.pos.roomName].visual
               .line(
                 intent.creep.pos.x - 0.5,
                 intent.creep.pos.y - 0.5,
@@ -176,7 +181,11 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         intent.resolved = true;
         // logCpu('resolving intent');
 
-        if (opts?.visualize) intent.creep.room.visual.line(intent.creep.pos, targetPos, { color: 'green', width: 0.5 });
+        if (opts?.visualize)
+          Game.rooms[intent.creep.pos.roomName].visual.line(intent.creep.pos, targetPos, {
+            color: 'green',
+            width: 0.5
+          });
 
         // remove pos from other intents targeting the same position
         const posKey = packPos(targetPos);
@@ -206,13 +215,16 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
 
           if (swapCreep) {
             if (opts?.visualize)
-              swapCreep.creep.room.visual.circle(swapCreep.creep.pos, { radius: 0.2, fill: 'green' });
+              Game.rooms[swapCreep.creep.pos.roomName].visual.circle(swapCreep.creep.pos, {
+                radius: 0.2,
+                fill: 'green'
+              });
             // override previously resolved intents
             movingHereIntents
               .filter(i => i.resolved)
               .forEach(i => {
-                if (opts?.visualize) i.creep.room.visual.circle(i.creep.pos, { radius: 0.2, fill: 'red' });
-                i.creep.move(i.creep);
+                if (opts?.visualize)
+                  Game.rooms[i.creep.pos.roomName].visual.circle(i.creep.pos, { radius: 0.2, fill: 'red' });
               });
             used.delete(swapPos);
             // handle swapCreep next

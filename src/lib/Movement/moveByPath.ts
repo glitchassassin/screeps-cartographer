@@ -6,7 +6,7 @@ import { moveTo } from './moveTo';
  * If the creep isn't already on the path, it moves to the path first. Returns
  * ERR_NO_PATH if the cached path doesn't exist.
  */
-export function moveByPath(creep: Creep, key: string, opts?: MoveByCachedPathOpts) {
+export function moveByPath(creep: Creep | PowerCreep, key: string, opts?: MoveByCachedPathOpts) {
   const result = followPath(creep, key, opts);
   if (result === ERR_NOT_FOUND) {
     // need to move to the path

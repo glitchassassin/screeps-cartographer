@@ -5,7 +5,7 @@ import { reconciledRecently } from '../TrafficManager/reconcileTraffic';
  * Registers a move intent with the Traffic Manager, if reconcileTraffic has
  * run recently, or else falls back to a regular move
  */
-export function move(creep: Creep, targets: RoomPosition[], priority = 1) {
+export function move(creep: Creep | PowerCreep, targets: RoomPosition[], priority = 1) {
   if (reconciledRecently()) {
     // Traffic manager is running
     registerMove({

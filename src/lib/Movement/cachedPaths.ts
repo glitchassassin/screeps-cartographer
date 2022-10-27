@@ -92,7 +92,7 @@ export interface MoveByCachedPathOpts extends MoveOpts {
  * the creep is not on the path. In most cases, you'll want to use `moveByPath`
  * instead; this is used internally by `moveTo`.
  */
-export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpts) {
+export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveByCachedPathOpts) {
   const cache = opts?.cache ?? MemoryCache;
   const path = cache.with(PositionListSerializer).get(cachedPathKey(key));
   if (!path) return ERR_NO_PATH;
@@ -145,8 +145,9 @@ export function followPath(creep: Creep, key: string, opts?: MoveByCachedPathOpt
       ...opts.visualizePathStyle
     };
     const pathSegment = opts?.reverse ? path.slice(0, currentIndex) : path.slice(nextIndex);
-    creep.room.visual.poly(
-      pathSegment.filter(pos => pos.roomName === creep.room.name),
+    // TODO - Should power creep's room prop be optional?
+    creep.room?.visual.poly(
+      pathSegment.filter(pos => pos.roomName === creep.room?.name),
       style
     );
   }
