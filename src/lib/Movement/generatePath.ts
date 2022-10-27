@@ -6,11 +6,7 @@ import { findRoute } from '../WorldMap/findRoute';
 /**
  * Generates a path with PathFinder.
  */
-export function generatePath(
-  origin: RoomPosition,
-  targets: MoveTarget[],
-  opts: MoveOpts
-): RoomPosition[] | undefined {
+export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?: MoveOpts): RoomPosition[] | undefined {
   // Generate full opts object
   const actualOpts = {
     ...config.DEFAULT_MOVE_OPTS,

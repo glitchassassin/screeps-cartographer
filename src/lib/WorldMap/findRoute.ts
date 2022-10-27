@@ -104,18 +104,17 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
         rooms.add(detour2);
       }
     }
-
-    // now floodfill adjoining rooms, up to maxRooms
-    const frontier = [...rooms];
-    while (rooms.size < maxRooms) {
-      const room = frontier.shift();
-      if (!room) break;
-      for (const adjacentRoom of Object.values(Game.map.describeExits(room))) {
-        if (rooms.has(adjacentRoom)) continue;
-        if (memoizedRouteCallback(adjacentRoom, room) !== Infinity) {
-          rooms.add(adjacentRoom);
-          frontier.push(adjacentRoom);
-        }
+  }
+  // now floodfill adjoining rooms, up to maxRooms
+  const frontier = [...rooms];
+  while (rooms.size < maxRooms) {
+    const room = frontier.shift();
+    if (!room) break;
+    for (const adjacentRoom of Object.values(Game.map.describeExits(room))) {
+      if (rooms.has(adjacentRoom)) continue;
+      if (memoizedRouteCallback(adjacentRoom, room) !== Infinity) {
+        rooms.add(adjacentRoom);
+        frontier.push(adjacentRoom);
       }
     }
   }
