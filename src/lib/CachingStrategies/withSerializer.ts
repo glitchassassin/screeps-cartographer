@@ -21,14 +21,14 @@ export const withSerializer = <T>(strategy: CachingStrategy, serializer: Seriali
     if (value !== undefined) HeapCache.set(cacheKey(serializer, serializedValue), value, Game.time + CREEP_LIFE_TIME);
     return value;
   },
-  set(key: string, value: T) {
+  set(key: string, value: T, expiration?: number) {
     // free previously cached deserialized value
     const previous = strategy.get(key);
     if (previous) HeapCache.delete(cacheKey(serializer, previous));
 
     const v = serializer.serialize(value);
     if (v) {
-      strategy.set(key, v);
+      strategy.set(key, v, expiration);
       HeapCache.set(cacheKey(serializer, v), value, Game.time + CREEP_LIFE_TIME);
     } else {
       strategy.delete(key);

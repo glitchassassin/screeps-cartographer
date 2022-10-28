@@ -1,4 +1,5 @@
-import { cachePath, CachingStrategies, getCachedPath, moveByPath, resetCachedPath } from '../../lib';
+import { config } from 'config';
+import { cachePath, getCachedPath, moveByPath, resetCachedPath } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 
@@ -17,15 +18,15 @@ export class TestCachedPaths extends CartographerTestCase {
     // setup
     this.ticksRun += 1;
     const controller = this.spawn.room.controller;
-    if (!controller) return TestResult.FAIL;
-    const path1 = cachePath('controller1', this.spawn.pos, controller, { cache: CachingStrategies.HeapCache });
-    if (!path1) return TestResult.FAIL;
+    if (!controller) throw new Error('No controller');
+    const path1 = cachePath('controller1', this.spawn.pos, controller, { reusePath: CREEP_LIFE_TIME });
+    if (!path1) throw new Error('controller1 path failed to generate');
     const path2 = cachePath(
       'controller2',
       this.spawn.pos,
       { pos: path1[path1.length - 1], range: 0 },
       {
-        cache: CachingStrategies.HeapCache,
+        reusePath: CREEP_LIFE_TIME,
         roadCost: 1,
         plainCost: 1,
         swampCost: 1,
@@ -38,32 +39,50 @@ export class TestCachedPaths extends CartographerTestCase {
         }
       }
     );
+    if (!path2) throw new Error('controller1 path failed to generate');
+
+    if (this.ticksRun === 1) {
+      cachePath('expiration_test', this.spawn.pos, controller, { reusePath: 10 });
+    } else if (this.ticksRun > 11) {
+      if (getCachedPath('expiration_test')) throw new Error('Expired path was not cleaned up');
+    }
+
+    if (!Memory[config.MEMORY_CACHE_PATH]['_poi_controller1']) throw new Error('Could not find path in Memory');
+    if (!Memory[config.MEMORY_CACHE_EXPIRATION_PATH]['_poi_controller1'])
+      throw new Error('Could not find path expiration in Memory');
 
     // test begins
-    if (!path2) return TestResult.FAIL;
     new RoomVisual(this.spawn.room.name).poly(path1, { stroke: 'magenta' }).poly(path2, { stroke: 'cyan' });
     if (this.phase === 0) {
       if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller1', { cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller1');
     }
     if (this.phase === 1) {
       if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller2', { reverse: true, cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller2', { reverse: true });
     }
     if (this.phase === 2) {
       if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller2', { cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller2');
     }
     if (this.phase === 3) {
       if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller1', { reverse: true, cache: CachingStrategies.HeapCache });
+      moveByPath(this.creeps.c1, 'controller1', { reverse: true });
     }
 
     if (this.phase === 4) {
-      resetCachedPath('controller', { cache: CachingStrategies.HeapCache });
-      if (!getCachedPath('controller', { cache: CachingStrategies.HeapCache })) return TestResult.PASS;
-      return TestResult.FAIL;
+      resetCachedPath('controller1');
+      resetCachedPath('controller2');
+      if (!getCachedPath('controller1') && !getCachedPath('controller2')) return TestResult.PASS;
+      throw new Error('Failed to reset cached path');
     }
     return TestResult.PENDING;
+  }
+
+  cleanup() {
+    super.cleanup();
+    resetCachedPath('controller1');
+    resetCachedPath('controller2');
+    resetCachedPath('expiration_test');
   }
 }

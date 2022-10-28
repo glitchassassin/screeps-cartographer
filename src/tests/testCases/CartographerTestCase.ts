@@ -44,21 +44,26 @@ export abstract class CartographerTestCase {
 
   // boilerplate
   run(): TestResult {
-    this.visualize();
-    let setupResult = this.setup();
-    if (setupResult !== TestResult.PASS) return setupResult;
-    this.started ??= Game.time;
-    if (Game.time - this.started > this.timeout) {
-      console.log(`${this} timed out`);
-      this.reset();
+    try {
+      this.visualize();
+      let setupResult = this.setup();
+      if (setupResult !== TestResult.PASS) return setupResult;
+      this.started ??= Game.time;
+      if (Game.time - this.started > this.timeout) {
+        console.log(`${this} timed out`);
+        this.reset();
+        return TestResult.FAIL;
+      }
+
+      let testResult = this.test();
+      if (testResult === TestResult.PASS) {
+        this.cleanup();
+      }
+      return testResult;
+    } catch (e) {
+      console.log(`[${this.constructor.name}] ${e}`);
       return TestResult.FAIL;
     }
-
-    let testResult = this.test();
-    if (testResult === TestResult.PASS) {
-      this.cleanup();
-    }
-    return testResult;
   }
   setup(): TestResult {
     let pending = false;
