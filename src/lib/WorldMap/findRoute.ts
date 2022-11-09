@@ -110,7 +110,9 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
   while (rooms.size < maxRooms) {
     const room = frontier.shift();
     if (!room) break;
-    for (const adjacentRoom of Object.values(Game.map.describeExits(room))) {
+    const exits = Game.map.describeExits(room);
+    if (!exits) continue;
+    for (const adjacentRoom of Object.values(exits)) {
       if (rooms.has(adjacentRoom)) continue;
       if (memoizedRouteCallback(adjacentRoom, room) !== Infinity) {
         rooms.add(adjacentRoom);
