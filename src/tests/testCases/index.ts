@@ -1,6 +1,7 @@
 import { adjacentWalkablePositions, calculateNearbyPositions } from '../../lib/Movement/selectors';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
+import { TestBlockSquare } from './TestBlockSquare';
 import { TestCachedPaths } from './TestCachedPaths';
 import { TestDeadlock } from './TestDeadlock';
 import { TestFlee } from './TestFlee';
@@ -22,7 +23,8 @@ export const allTestCases = [
   new TestShove(),
   new TestTrain(),
   new TestRoomEdgeRange(),
-  new TestPulling()
+  new TestPulling(),
+  new TestBlockSquare()
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();

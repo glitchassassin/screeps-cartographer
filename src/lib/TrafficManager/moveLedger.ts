@@ -14,7 +14,8 @@ const generateIndexes = () => ({
   targets: new Map<string, Map<Creep | PowerCreep, MoveIntent>>(),
   pullers: new Set<Creep | PowerCreep>(),
   pullees: new Set<Creep | PowerCreep>(),
-  prefersToStay: new Set<string>()
+  prefersToStay: new Set<string>(),
+  blockedSquares: new Set<string>()
 });
 let _indexes = new Map<string, ReturnType<typeof generateIndexes>>();
 let tick = 0;
@@ -110,4 +111,11 @@ export function updateIntentTargetCount(intent: MoveIntent, oldCount: number, ne
   const byTargetCount = byPriority.get(newCount) ?? new Map<Creep | PowerCreep, MoveIntent>();
   byPriority.set(newCount, byTargetCount);
   byTargetCount.set(intent.creep, intent);
+}
+
+/**
+ * Blocks a specific square, to vacate a space for e.g. creating a construction site or spawning
+ */
+export function blockSquare(pos: RoomPosition) {
+  getMoveIntents(pos.roomName).blockedSquares.add(packPos(pos));
 }

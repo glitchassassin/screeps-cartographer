@@ -140,6 +140,10 @@ If `reconcileTraffic` is not included, creeps will simply default to unmanaged m
 
 `reconcileTraffic` will only manage creeps that use Cartographer to move; it is not compatible with Creep prototype move methods, so will cause issues if you try to mix both approaches. **It's best to pick one or the other for all creep movement.**
 
+If you have a specialized use case (e.g. quads/duos) and need low-level movement control, you can invoke the Cartographer-provided `move()` function to move a creep and track it for traffic management.
+
+Finally, you can use the `blockSquare()` function to push creeps out of a square even if nothing else is moving there (for clearing space at spawn, or to lay down a construction site, for example).
+
 ### Setting Movement Priorities
 
 All move functions accept a `priority` option:

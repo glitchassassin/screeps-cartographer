@@ -48,8 +48,8 @@ export function reconcileTraffic(opts?: ReconcileTrafficOpts) {
 function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
   const start = Game.cpu.getUsed();
   let moveTime = 0;
-  const used = new Set<string>();
   const moveIntents = getMoveIntents(room);
+  const used = moveIntents.blockedSquares;
 
   // visualize
   if (opts?.visualize) {
