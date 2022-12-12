@@ -3,6 +3,7 @@ import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 import { TestBlockSquare } from './TestBlockSquare';
 import { TestCachedPaths } from './TestCachedPaths';
+import { TestCPU } from './TestCPU';
 import { TestDeadlock } from './TestDeadlock';
 import { TestFlee } from './TestFlee';
 import { TestPriority } from './TestPriority';
@@ -24,9 +25,10 @@ export const allTestCases = [
   new TestTrain(),
   new TestRoomEdgeRange(),
   new TestPulling(),
-  new TestBlockSquare()
+  new TestBlockSquare(),
+  new TestCPU()
 ];
-export const testCases = allTestCases.slice();
+export const testCases = allTestCases.slice(11);
 const testResults = new Map<CartographerTestCase, TestResult>();
 let initialized = false;
 
