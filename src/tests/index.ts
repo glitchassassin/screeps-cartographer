@@ -3,6 +3,8 @@ import { scout } from './roles/scout';
 import { worker } from './roles/worker';
 import { runTestCases, testCasesComplete } from './testCases';
 
+let trafficCpu: number[] = [];
+
 export const runTestScenarios = () => {
   for (const name in Memory.creeps) {
     if (!Game.creeps[name]) delete Memory.creeps[name];
@@ -21,7 +23,19 @@ export const runTestScenarios = () => {
   }
   if (!spawning) runTestCases();
 
+  const start = Game.cpu.getUsed();
   reconcileTraffic({ visualize: true });
+  const cpuUsed = Game.cpu.getUsed() - start;
+  trafficCpu.push(cpuUsed / Object.keys(Game.creeps).length);
+  if (trafficCpu.length && Game.time % 100 === 0) {
+    // track last 100 ticks
+    trafficCpu = trafficCpu.slice(-100);
+    console.log(
+      `Average CPU used by traffic management: ${(trafficCpu.reduce((a, b) => a + b, 0) / trafficCpu.length).toFixed(
+        2
+      )} per creep`
+    );
+  }
 
   visualizeIntel();
   // profileReport();
