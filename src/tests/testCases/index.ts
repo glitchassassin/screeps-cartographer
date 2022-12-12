@@ -28,7 +28,7 @@ export const allTestCases = [
   new TestBlockSquare(),
   new TestCPU()
 ];
-export const testCases = allTestCases.slice(11);
+export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();
 let initialized = false;
 
