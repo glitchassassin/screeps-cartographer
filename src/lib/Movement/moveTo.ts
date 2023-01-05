@@ -92,6 +92,31 @@ export const moveTo = (
     clearCachedPath(creep, cache);
   }
 
+  // Dynamic choose weight for plain and swamp depending on body.
+  // Skip if power creep or both plain and swamp costs has been manually set.
+  if (DEBUG) logCpu('getting default plain and swamp costs');
+  if ('body' in creep && (!actualOpts.plainCost || !actualOpts.swampCost)) {
+    const moveParts = creep.body.filter(b => b.type === MOVE).length;
+    const carryParts = creep.body.filter(b => b.type === CARRY).length;
+    const otherBodyParts = creep.body.length - moveParts - carryParts;
+    const usedCarryParts = carryParts - Math.floor(creep.store.getFreeCapacity() / 50);
+
+    const fatigueFactor = usedCarryParts + otherBodyParts;
+    const recoverFactor = moveParts * 2;
+
+    // This is the cost for roads. Roads will be always cost 1 because all costs should be normalized
+    // and 1 is the minimum cost, so we will use it only if it's lower than 1.
+    const cost = recoverFactor / fatigueFactor;
+
+    // Change plain and swamp costs only if cost is lower than 1. Otherwise, we would need to normalize
+    // costs dividing by the cost factor, and the relation would be always 1 / 2 / 10 then, the default values.
+    if (cost < 1) {
+      // Only overwrite ones not manually set.
+      actualOpts.plainCost ??= Math.ceil(cost * 2);
+      actualOpts.swampCost ??= Math.ceil(cost * 10);
+    }
+  }
+
   if (DEBUG) logCpu('checking opts');
 
   let needToFlee = false;
