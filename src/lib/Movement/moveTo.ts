@@ -107,7 +107,8 @@ export const moveTo = (
       const fatigueFactor = usedCarryParts + otherBodyParts;
       const recoverFactor = moveParts * 2;
 
-      const cost = Math.max(fatigueFactor / recoverFactor, 1);
+      // In case cost is 0 (only move parts), all terrains will cost 1.
+      const cost = Math.max(fatigueFactor / recoverFactor, 0.1);
 
       // Number of ticks that it takes move over each terrain.
       const roadCost = Math.ceil(cost);
