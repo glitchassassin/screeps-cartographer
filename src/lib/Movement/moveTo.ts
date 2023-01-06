@@ -92,28 +92,44 @@ export const moveTo = (
     clearCachedPath(creep, cache);
   }
 
-  // Dynamic choose weight for plain and swamp depending on body.
-  // Skip if power creep or both plain and swamp costs has been manually set.
+  // Dynamic choose weight for roads, plains and swamps depending on body.
+  // Skip if power creep or any costs has been manually set.
   if (DEBUG) logCpu('getting default plain and swamp costs');
-  if ('body' in creep && (!actualOpts.plainCost || !actualOpts.swampCost)) {
+  const manuallyDefinedCosts = opts?.roadCost || opts?.plainCost || opts?.swampCost;
+  if ('body' in creep && !manuallyDefinedCosts) {
     const moveParts = creep.body.filter(b => b.type === MOVE).length;
-    const carryParts = creep.body.filter(b => b.type === CARRY).length;
-    const otherBodyParts = creep.body.length - moveParts - carryParts;
-    const usedCarryParts = carryParts - Math.floor(creep.store.getFreeCapacity() / 50);
+    // If no move parts it can't move, skip and apply defaults to speed this up.
+    if (moveParts > 0) {
+      const carryParts = creep.body.filter(b => b.type === CARRY).length;
+      const otherBodyParts = creep.body.length - moveParts - carryParts;
+      const usedCarryParts = carryParts - Math.floor(creep.store.getFreeCapacity() / 50);
 
-    const fatigueFactor = usedCarryParts + otherBodyParts;
-    const recoverFactor = moveParts * 2;
+      const fatigueFactor = usedCarryParts + otherBodyParts;
+      const recoverFactor = moveParts * 2;
 
-    // This is the cost for roads. Roads will be always cost 1 because all costs should be normalized
-    // and 1 is the minimum cost, so we will use it only if it's lower than 1.
-    const cost = recoverFactor / fatigueFactor;
+      const cost = Math.max(fatigueFactor / recoverFactor, 1);
 
-    // Change plain and swamp costs only if cost is lower than 1. Otherwise, we would need to normalize
-    // costs dividing by the cost factor, and the relation would be always 1 / 2 / 10 then, the default values.
-    if (cost < 1) {
-      // Only overwrite ones not manually set.
-      actualOpts.plainCost ??= Math.ceil(cost * 2);
-      actualOpts.swampCost ??= Math.ceil(cost * 10);
+      // Number of ticks that it takes move over each terrain.
+      const roadCost = Math.ceil(cost);
+      const plainCost = Math.ceil(cost * 2);
+      const swampCost = Math.ceil(cost * 10);
+
+      // Greatest common divisor.
+      // https://github.com/30-seconds/30-seconds-of-code/blob/master/snippets/gcd.md
+      const gcd = (...arr: number[]) => {
+        const _gcd = (x: number, y: number): number => (!y ? x : gcd(y, x % y));
+        return [...arr].reduce((a, b) => _gcd(a, b));
+      };
+
+      // Calculate the greatest common divisor so we can reduce the costs to the smallest numbers possible.
+      const norm = gcd(roadCost, plainCost, swampCost);
+
+      // Normalize and set the default costs. This costs are going to be always under the 255 limit.
+      // Worst scenario is with 49 not move body parts and only 1 move part. This means a cost of 24.5,
+      // implying 25 / 49 / 245 costs for each terrain.
+      actualOpts.roadCost ??= roadCost / norm;
+      actualOpts.plainCost ??= plainCost / norm;
+      actualOpts.swampCost ??= plainCost / norm;
     }
   }
 
