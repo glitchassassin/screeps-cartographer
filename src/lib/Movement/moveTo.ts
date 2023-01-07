@@ -130,7 +130,7 @@ export const moveTo = (
       // implying 25 / 49 / 245 costs for each terrain.
       actualOpts.roadCost ??= roadCost / norm;
       actualOpts.plainCost ??= plainCost / norm;
-      actualOpts.swampCost ??= plainCost / norm;
+      actualOpts.swampCost ??= swampCost / norm;
     }
   }
 
