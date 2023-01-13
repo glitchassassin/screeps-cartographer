@@ -97,10 +97,31 @@ export const moveTo = (
   if (DEBUG) logCpu('getting default plain and swamp costs');
   const manuallyDefinedCosts = opts?.roadCost || opts?.plainCost || opts?.swampCost;
   if ('body' in creep && !manuallyDefinedCosts) {
-    const moveParts = creep.body.filter(b => b.type === MOVE).length;
+    const moveBoostsTiers = {
+      [RESOURCE_ZYNTHIUM_OXIDE]: 1,
+      [RESOURCE_ZYNTHIUM_ALKALIDE]: 2,
+      [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 3
+    };
+    const carryBoostsTiers = {
+      [RESOURCE_KEANIUM_OXIDE]: 1,
+      [RESOURCE_KEANIUM_ALKALIDE]: 2,
+      [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 3
+    };
+    let moveParts = 0;
+    let carryParts = 0;
+    for (const bodyPart of creep.body) {
+      if (bodyPart.type === MOVE && bodyPart.hits > 0) {
+        moveParts += 1;
+        if (bodyPart.boost && bodyPart.boost in moveBoostsTiers) {
+          moveParts += moveBoostsTiers[bodyPart.boost];
+        }
+      } else if (bodyPart.type === CARRY && bodyPart.hits > 0) {
+        carryParts += 1;
+      }
+    }
+
     // If no move parts it can't move, skip and apply defaults to speed this up.
     if (moveParts > 0) {
-      const carryParts = creep.body.filter(b => b.type === CARRY).length;
       const otherBodyParts = creep.body.length - moveParts - carryParts;
       const usedCarryParts = carryParts - Math.floor(creep.store.getFreeCapacity() / 50);
 
