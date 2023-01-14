@@ -97,41 +97,49 @@ export const moveTo = (
   if (DEBUG) logCpu('getting default plain and swamp costs');
   const manuallyDefinedCosts = opts?.roadCost || opts?.plainCost || opts?.swampCost;
   if ('body' in creep && !manuallyDefinedCosts) {
-    const moveBoostsTiers = {
-      [RESOURCE_ZYNTHIUM_OXIDE]: 1,
-      [RESOURCE_ZYNTHIUM_ALKALIDE]: 2,
-      [RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE]: 3
-    };
-    const carryBoostsTiers = {
-      [RESOURCE_KEANIUM_OXIDE]: 1,
-      [RESOURCE_KEANIUM_ALKALIDE]: 2,
-      [RESOURCE_CATALYZED_KEANIUM_ALKALIDE]: 3
-    };
+    let totalCarry = creep.store.getUsedCapacity();
+
     let moveParts = 0;
-    let carryParts = 0;
-    for (const bodyPart of creep.body) {
-      if (bodyPart.type === MOVE && bodyPart.hits > 0) {
-        moveParts += 1;
-        if (bodyPart.boost && bodyPart.boost in moveBoostsTiers) {
-          moveParts += moveBoostsTiers[bodyPart.boost];
+    let usedCarryParts = 0;
+    let otherBodyParts = 0;
+
+    // Iterating right to left because carry parts are filled in that order.
+    for (let i = creep.body.length - 1; i >= 0; i--) {
+      const bodyPart: BodyPartDefinition = creep.body[i];
+      if (bodyPart.type !== MOVE && bodyPart.type !== CARRY) {
+        otherBodyParts++;
+      } else if (bodyPart.hits <= 0) {
+        continue;
+      } else if (bodyPart.type === MOVE) {
+        let boost = 1;
+        if (bodyPart.boost) {
+          boost = BOOSTS[MOVE][bodyPart.boost].fatigue;
         }
-      } else if (bodyPart.type === CARRY && bodyPart.hits > 0) {
-        carryParts += 1;
+        moveParts += 1 * boost;
+      } else if (totalCarry > 0 && bodyPart.type === CARRY) {
+        let boost = 1;
+        if (bodyPart.boost) {
+          boost = BOOSTS[CARRY][bodyPart.boost].capacity;
+        }
+        // We count carry parts used by removing the capacity used by them from the total that the creep is carrying.
+        // When total is empty, resting carry parts doesn't generate fatigue (even if they have no hits).
+        totalCarry -= CARRY_CAPACITY * boost;
+        usedCarryParts++;
       }
     }
 
     // If no move parts it can't move, skip and apply defaults to speed this up.
     if (moveParts > 0) {
-      const otherBodyParts = creep.body.length - moveParts - carryParts;
-      const usedCarryParts = carryParts - Math.floor(creep.store.getFreeCapacity() / 50);
-
       const fatigueFactor = usedCarryParts + otherBodyParts;
       const recoverFactor = moveParts * 2;
 
       // In case cost is 0 (only move parts), all terrains will cost 1.
+      // Hardcoding 0.1 as minimum cost to obtain this result.
       const cost = Math.max(fatigueFactor / recoverFactor, 0.1);
 
       // Number of ticks that it takes move over each terrain.
+      // Having this as a separated function could be interesting for obtaining how many ticks
+      // it will take a creep to walk over a route with determined terrains.
       const roadCost = Math.ceil(cost);
       const plainCost = Math.ceil(cost * 2);
       const swampCost = Math.ceil(cost * 10);
