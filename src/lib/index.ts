@@ -81,7 +81,7 @@ export interface MoveOpts extends PathFinderOpts {
    */
   routeCallback?: (roomName: string, fromRoomName: string) => number | undefined;
   /**
-   * Creep store and body, used to calculate default terrain costs.
+   * Creep used capacity and body, used to calculate default terrain costs.
    */
   creepMovementInfo?: { usedCapacity: number; body: Creep['body'] };
 }
