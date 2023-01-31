@@ -210,3 +210,4 @@ To run the tests, simply run the build and copy the contents of `dist/test.js` t
 ## Contributors
 
 - [rougeayrn](https://github.com/rougeayrn)
+- [Javrd](https://github.com/Javrd)
