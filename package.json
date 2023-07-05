@@ -1,6 +1,6 @@
 {
   "name": "screeps-cartographer",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "An advanced (and open source) movement library for Screeps",
   "homepage": "https://glitchassassin.github.io/screeps-cartographer/",
   "repository": {
@@ -12,7 +12,7 @@
   },
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
-  "files": [ 
+  "files": [
     "dist/**/*"
   ],
   "scripts": {
