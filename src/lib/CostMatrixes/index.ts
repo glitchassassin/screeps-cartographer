@@ -12,8 +12,9 @@ export interface CostMatrixOptions {
  * Mutates a cost matrix based on a set of options, and returns the mutated cost matrix.
  */
 export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixOptions) => {
-  if (opts.avoidCreeps) {
-    Game.rooms[room]?.find(FIND_CREEPS).forEach(c => cm.set(c.pos.x, c.pos.y, 255));
+  if (opts.avoidCreeps && Game.rooms[room]) {
+    [...Game.rooms[room].find(FIND_CREEPS), ...Game.rooms[room].find(FIND_POWER_CREEPS)]
+      .forEach(c => cm.set(c.pos.x, c.pos.y, 255));
   }
   if (opts.avoidSourceKeepers) {
     avoidSourceKeepers(room, cm);
