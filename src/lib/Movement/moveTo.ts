@@ -177,9 +177,11 @@ export const moveTo = (
   // move to any viable target square, if path is nearly done
   if (path && path[path.length - 2]?.isEqualTo(creep.pos)) {
     // Nearly at end of path
+    let viableSquares = adjacentWalkablePositions(creep.pos, true).filter(p => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)));
+    if (viableSquares.length === 0) return ERR_NO_PATH;
     move(
       creep,
-      adjacentWalkablePositions(creep.pos, true).filter(p => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))),
+      viableSquares,
       actualOpts.priority
     );
     return OK;
