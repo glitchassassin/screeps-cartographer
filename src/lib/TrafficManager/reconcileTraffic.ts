@@ -69,7 +69,8 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
   }
 
   // Set move intents for shove targets
-  for (const creep of Game.rooms[room].find(FIND_MY_CREEPS)) {
+  for (const creep of (Game.rooms[room].find(FIND_MY_CREEPS) as (Creep | PowerCreep)[])
+    .concat(Game.rooms[room].find(FIND_MY_POWER_CREEPS))) {
     if (moveIntents.creep.has(creep) || moveIntents.pullees.has(creep) || moveIntents.pullers.has(creep)) continue;
 
     registerMove({

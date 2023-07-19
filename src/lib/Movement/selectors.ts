@@ -130,7 +130,7 @@ export const isPositionWalkable = (
   if (
     Game.rooms[pos.roomName] &&
     pos.look().some(obj => {
-      if (!ignoreCreeps && obj.type === LOOK_CREEPS) return true;
+      if (!ignoreCreeps && (obj.type === LOOK_CREEPS || obj.type === LOOK_POWER_CREEPS)) return true;
       if (
         !ignoreStructures &&
         obj.constructionSite &&
