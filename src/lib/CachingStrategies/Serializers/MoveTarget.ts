@@ -35,7 +35,7 @@ export const MoveTargetListSerializer: Serializer<MoveTarget[]> = {
     if (target === undefined) return undefined;
     const targets = [];
     for (let i = 0; i < target.length; i += 3) {
-      const t = MoveTargetSerializer.deserialize(target.slice(i, 3));
+      const t = MoveTargetSerializer.deserialize(target.slice(i, i + 3));
       if (t) targets.push(t);
     }
     return targets;
