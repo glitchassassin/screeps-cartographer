@@ -32,7 +32,7 @@ export const allTestCases = [
   new TestOpportunitySquares(),
   new TestPackPosList()
 ];
-export const testCases = allTestCases.slice(13);
+export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();
 let initialized = false;
 

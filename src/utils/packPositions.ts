@@ -1,20 +1,24 @@
 import { Codec } from "screeps-utf15";
 
-const depths = [2, 7, 7, 6, 6];
-const roomPositionCodec = new Codec({ array: true, depth: depths });
-const directionsCodec = new Codec({ depth: 3, array: true })
+declare global {
+  interface RoomPosition {
+    __packedPos: number
+  }
+}
 
-
-const cardinals = ['WN', 'EN', 'WS', 'ES'];
+const roomPositionCodec = new Codec({ array: false, depth: 28 });
+const directionsCodec = new Codec({ depth: 3, array: true });
 
 /**
  * Pack RoomPosition to two Unicode characters with screeps-utf15
  */
 export const packPos = (pos: RoomPosition) => {
-  // split the room name
-  const [_, d1, x, d2, y] = pos.roomName.split(/([A-Z])([0-9]+)([A-Z])([0-9]+)/);
+  // adjust the packedPos
+  const xx = (pos.__packedPos & 0xff00) >> 8
+  const yy = (pos.__packedPos & 0xff)
+  const packedPos = ((pos.__packedPos >> 4) & 0xfffff000) | xx << 6 | yy
   // encode the room position
-  return roomPositionCodec.encode([cardinals.indexOf(d1 + d2), parseInt(x), parseInt(y), pos.x, pos.y])
+  return roomPositionCodec.encode(packedPos)
 }
 
 /**
@@ -22,12 +26,15 @@ export const packPos = (pos: RoomPosition) => {
  */
 export const unpackPos = function (str: string) {
   // decode the room position
-  const [d1d2, x, y, roomX, roomY] = roomPositionCodec.decode(str);
-  // join the room name
-  const [d1, d2] = cardinals[d1d2].split('');
-  const roomName = `${d1}${x}${d2}${y}`;
+  const packedPos = roomPositionCodec.decode(str);
+  // adjust the packedPos
+  const xx = (packedPos & 0xfc0) >> 6
+  const yy = (packedPos & 0x3f)
+  const newPackedPos = ((packedPos << 4) & 0xffff0000) | xx << 8 | yy
   // return a new RoomPosition object
-  return new RoomPosition(roomX, roomY, roomName);
+  const pos = new RoomPosition(0, 0, 'E0S0');
+  pos.__packedPos = newPackedPos
+  return pos;
 }
 
 /**
