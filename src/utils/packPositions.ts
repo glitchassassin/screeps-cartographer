@@ -6,8 +6,16 @@ declare global {
   }
 }
 
+export interface Coord {
+  x: number;
+  y: number;
+}
+
 const roomPositionCodec = new Codec({ array: false, depth: 28 });
+const coordCodec = new Codec({ array: true, depth: 12 });
 const directionsCodec = new Codec({ depth: 3, array: true });
+const roomNameCodec = new Codec({ array: true, depth: 16 });
+const cardinals = ['WN', 'EN', 'WS', 'ES'];
 
 /**
  * Pack RoomPosition to two Unicode characters with screeps-utf15
@@ -35,6 +43,37 @@ export const unpackPos = function (str: string) {
   const pos = new RoomPosition(0, 0, 'E0S0');
   pos.__packedPos = newPackedPos
   return pos;
+}
+
+/**
+ * Pack a Coord to 12 bits with utf15
+ */
+export const packCoord = (coord: Coord) => {
+  return packCoordList([coord])
+}
+
+/**
+ * Unpack a coord with utf15
+ */
+export const unpackCoord = (str: string) => {
+  return unpackCoordList(str)[0]
+}
+
+/**
+ * Pack a list of Coords as compactly as possible with utf15
+ */
+export const packCoordList = (coords: Coord[]) => {
+  return coordCodec.encode(coords.map(c => (c.x << 6 | c.y)))
+}
+
+/**
+ * Unpack a list of Coords as compactly as possible with utf15
+ */
+export const unpackCoordList = (str: string): Coord[] => {
+  return coordCodec.decode(str).map(n => ({
+    x: (n & 0xfc0) >> 6,
+    y: n & 0x03f
+  }))
 }
 
 /**
@@ -162,3 +201,40 @@ export const decompressPath = (str: string) => {
   }
   return path;
 }
+
+/**
+ * Pack a list of room names as compactly as possible
+ */
+export const packRoomNames = (roomNames: string[]) => {
+  // encode the room position
+  return roomNameCodec.encode(roomNames.map(roomName => {
+    // split the room name
+    const [_, d1, x, d2, y] = roomName.split(/([A-Z])([0-9]+)([A-Z])([0-9]+)/);
+    return cardinals.indexOf(d1 + d2) << 14 | parseInt(x) << 7 | parseInt(y)
+  }))
+}
+
+/**
+ * Unpack a list of room names as compactly as possible
+ */
+export const unpackRoomNames = (str: string) => {
+  // decode the room position
+  return roomNameCodec.decode(str).map(packed => {
+    const d1d2 = packed >> 14;
+    const x = (packed >> 7) & 0x7f;
+    const y = packed & 0x7f;
+    // join the room name
+    const [d1, d2] = cardinals[d1d2].split('');
+    return `${d1}${x}${d2}${y}`;
+  });
+}
+
+/**
+ * Pack a single room name into two UTF-15 characters
+ */
+export const packRoomName = (roomName: string) => packRoomNames([roomName]);
+
+/**
+ * Unpack a single room name from two UTF-15 characters
+ */
+export const unpackRoomName = (str: string) => unpackRoomNames(str)[0];

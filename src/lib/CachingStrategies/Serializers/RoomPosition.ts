@@ -9,7 +9,7 @@ import {
   unpackCoordList,
   unpackPos,
   unpackPosList
-} from '../../../utils/packrat';
+} from '../../../utils/packPositions';
 
 export const PositionSerializer: Serializer<RoomPosition> = {
   key: 'ps',

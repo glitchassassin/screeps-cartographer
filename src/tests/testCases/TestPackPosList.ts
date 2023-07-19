@@ -1,4 +1,4 @@
-import { compressPath, decompressPath, packPos, packPosList, unpackPos, unpackPosList } from 'utils/packPositions';
+import { compressPath, decompressPath, packCoordList, packPos, packPosList, unpackCoordList, unpackPos, unpackPosList } from 'utils/packPositions';
 import { generatePath } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
@@ -14,6 +14,7 @@ export class TestPackPosList extends CartographerTestCase {
     let nextAdjacentRoom = Object.values(Game.map.describeExits(adjacentRoom)).filter(r => r !== currentRoom.name)[0]
 
     const path = generatePath(this.spawn.pos, [{ pos: new RoomPosition(25, 25, nextAdjacentRoom), range: 20 }])
+    const coordPath = path?.map(p => ({ x: p.x, y: p.y }))
 
     if (!path) {
       console.log("[TestPackPosList] Unable to generate path")
@@ -29,6 +30,13 @@ export class TestPackPosList extends CartographerTestCase {
     const packedUnpackedList = unpackPosList(packedList);
     if (!packedUnpackedList?.every((pos, i) => pos.isEqualTo(path[i]))) {
       console.log("[TestPackPosList] Inconsistent packPosList results")
+      return TestResult.FAIL;
+    }
+
+    const packedCoordList = packCoordList(path.map(p => ({ x: p.x, y: p.y })))
+    const packedUnpackedCoordList = unpackCoordList(packedCoordList);
+    if (!packedUnpackedCoordList?.every((c, i) => c.x === coordPath?.[i].x && c.y === coordPath?.[i].y)) {
+      console.log("[TestPackPosList] Inconsistent packCoordList results")
       return TestResult.FAIL;
     }
 

@@ -1,5 +1,5 @@
+import { Coord } from 'utils/packPositions';
 import { MoveTarget } from '..';
-import { Coord } from '../../utils/packrat';
 
 /**
  * Position is an edge tile
