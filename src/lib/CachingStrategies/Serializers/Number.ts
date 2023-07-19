@@ -1,5 +1,5 @@
+import { Codec } from 'screeps-utf15';
 import { Serializer } from '..';
-import { Codec } from '../../../utils/screeps-utf15';
 
 const numberCodec = new Codec({ array: false });
 

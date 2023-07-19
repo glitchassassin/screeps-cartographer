@@ -33,18 +33,21 @@
   "license": "MIT",
   "devDependencies": {
     "@knodes/typedoc-plugin-pages": "^0.23.1",
+    "@rollup/plugin-commonjs": "^25.0.3",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-typescript": "^8.3.4",
     "@types/jest": "^28.1.6",
     "@types/screeps": "^3.3.0",
     "jest": "^28.1.3",
-    "rollup": "^2.77.2",
+    "rollup": "^2.78.0",
+    "rollup-plugin-clear": "^2.0.7",
     "ts-jest": "^28.0.7",
     "tslib": "^2.4.0",
     "typedoc": "^0.23.10",
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "@rollup/plugin-typescript": "^8.3.4",
-    "rollup-plugin-clear": "^2.0.7",
+    "screeps-utf15": "^1.0.1",
     "ts-polyfill": "^3.8.2"
   }
 }

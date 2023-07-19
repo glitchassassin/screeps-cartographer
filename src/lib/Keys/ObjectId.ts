@@ -1,4 +1,4 @@
-import { Codec } from '../../utils/screeps-utf15';
+import { Codec } from 'screeps-utf15';
 
 /**
  * 15 bits will be enough for three hex characters

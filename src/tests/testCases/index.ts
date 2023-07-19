@@ -7,6 +7,7 @@ import { TestCPU } from './TestCPU';
 import { TestDeadlock } from './TestDeadlock';
 import { TestFlee } from './TestFlee';
 import { TestOpportunitySquares } from './TestOpportunitySquares';
+import { TestPackPosList } from './TestPackPosList';
 import { TestPriority } from './TestPriority';
 import { TestPulling } from './TestPulling';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
@@ -28,9 +29,10 @@ export const allTestCases = [
   new TestPulling(),
   new TestBlockSquare(),
   new TestCPU(),
-  new TestOpportunitySquares()
+  new TestOpportunitySquares(),
+  new TestPackPosList()
 ];
-export const testCases = allTestCases.slice(12);
+export const testCases = allTestCases.slice(13);
 const testResults = new Map<CartographerTestCase, TestResult>();
 let initialized = false;
 
