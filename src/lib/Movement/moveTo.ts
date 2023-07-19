@@ -4,6 +4,7 @@ import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer } f
 import { JsonSerializer } from '../CachingStrategies/Serializers/Json';
 import { creepKey } from '../Keys/Creep';
 // import { logCpu, logCpuStart } from '../../utils/logCpu';
+import { configureRoomCallback } from 'lib/CostMatrixes';
 import { config } from '../../config';
 import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';
@@ -177,9 +178,16 @@ export const moveTo = (
   // move to any viable target square, if path is nearly done
   if (path && path[path.length - 2]?.isEqualTo(creep.pos)) {
     // Nearly at end of path
-    const moveTarget = (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
-    const fleeTarget = (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range)
-    const targets = adjacentWalkablePositions(creep.pos, true).filter(!opts?.flee ? moveTarget : fleeTarget);
+    let cm = configureRoomCallback(actualOpts)(creep.pos.roomName);
+
+    const byCostMatrix = (cm instanceof PathFinder.CostMatrix) ?
+      (p: RoomPosition) => (cm as PathFinder["CostMatrix"]).get(p.x, p.y) !== 255 :
+      () => true
+    const target = !opts?.flee ?
+      (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)) :
+      (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range)
+    const targets = adjacentWalkablePositions(creep.pos, true)
+      .filter((p: RoomPosition) => target(p) && byCostMatrix(p));
     if (targets.length) {
       move(
         creep,

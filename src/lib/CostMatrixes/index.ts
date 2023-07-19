@@ -1,3 +1,4 @@
+import { MoveOpts } from 'lib';
 import { avoidSourceKeepers } from './sourceKeepers';
 
 export type CostMatrixMutator = (cm: CostMatrix, room: string) => CostMatrix;
@@ -45,3 +46,12 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
   }
   return cm;
 };
+
+
+export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string[]) => (room: string) => {
+  if (targetRooms && !targetRooms.includes(room)) return false; // outside route search space
+  let cm = actualOpts.roomCallback?.(room);
+  if (cm === false) return cm;
+  const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
+  return mutateCostMatrix(cloned, room, actualOpts);
+}

@@ -1,6 +1,6 @@
 import { config } from 'config';
 import { MoveOpts, MoveTarget } from '../';
-import { mutateCostMatrix } from '../CostMatrixes';
+import { configureRoomCallback } from '../CostMatrixes';
 import { findRoute } from '../WorldMap/findRoute';
 
 /**
@@ -39,13 +39,7 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
   const result = PathFinder.search(origin, targets, {
     ...actualOpts,
     maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
-    roomCallback(room) {
-      if (rooms && !rooms.includes(room)) return false; // outside route search space
-      let cm = actualOpts.roomCallback?.(room);
-      if (cm === false) return cm;
-      const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
-      return mutateCostMatrix(cloned, room, actualOpts);
-    }
+    roomCallback: configureRoomCallback(actualOpts, rooms)
   });
   if (!result.path.length || result.incomplete) return undefined;
 
