@@ -178,7 +178,7 @@ export const moveTo = (
   if (path && path[path.length - 2]?.isEqualTo(creep.pos)) {
     // Nearly at end of path
     const moveTarget = (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
-    const fleeTarget = (p: RoomPosition) => normalizedTargets.every(t => !t.pos.inRangeTo(p, t.range))
+    const fleeTarget = (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range)
     move(
       creep,
       adjacentWalkablePositions(creep.pos, true).filter(!opts?.flee ? moveTarget : fleeTarget),

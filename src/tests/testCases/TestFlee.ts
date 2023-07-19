@@ -7,11 +7,18 @@ export class TestFlee extends CartographerTestCase {
     c1: ''
   };
   timeout = 50; // ticks
+  lastRange = 0;
   test() {
     const RANGE = 10;
-    if (this.creeps.c1.pos.getRangeTo(this.spawn) === RANGE) {
+    const currentRange = this.creeps.c1.pos.getRangeTo(this.spawn)
+    if (currentRange === RANGE) {
       return TestResult.PASS;
     }
+    // Has edge cases, but generally, the range should never be *decreasing* while fleeing
+    if (currentRange < this.lastRange) {
+      return TestResult.FAIL;
+    }
+    this.lastRange = currentRange;
     moveTo(
       this.creeps.c1,
       { pos: this.spawn.pos, range: RANGE },
