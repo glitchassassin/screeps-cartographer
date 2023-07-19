@@ -1,8 +1,8 @@
-import { Codec } from "screeps-utf15";
+import { Codec } from 'screeps-utf15';
 
 declare global {
   interface RoomPosition {
-    __packedPos: number
+    __packedPos: number;
   }
 }
 
@@ -16,18 +16,17 @@ const coordCodec = new Codec({ array: true, depth: 12 });
 const directionsCodec = new Codec({ depth: 3, array: true });
 const roomNameCodec = new Codec({ array: true, depth: 16 });
 const cardinals = ['WN', 'EN', 'WS', 'ES'];
-
 /**
  * Pack RoomPosition to two Unicode characters with screeps-utf15
  */
 export const packPos = (pos: RoomPosition) => {
   // adjust the packedPos
-  const xx = (pos.__packedPos & 0xff00) >> 8
-  const yy = (pos.__packedPos & 0xff)
-  const packedPos = ((pos.__packedPos >> 4) & 0xfffff000) | xx << 6 | yy
+  const xx = (pos.__packedPos & 0xff00) >> 8;
+  const yy = pos.__packedPos & 0xff;
+  const packedPos = ((pos.__packedPos >> 4) & 0xfffff000) | (xx << 6) | yy;
   // encode the room position
-  return roomPositionCodec.encode(packedPos)
-}
+  return roomPositionCodec.encode(packedPos);
+};
 
 /**
  * Unpack a single packed RoomPosition from two Unicode characters
@@ -36,59 +35,66 @@ export const unpackPos = function (str: string) {
   // decode the room position
   const packedPos = roomPositionCodec.decode(str);
   // adjust the packedPos
-  const xx = (packedPos & 0xfc0) >> 6
-  const yy = (packedPos & 0x3f)
-  const newPackedPos = ((packedPos << 4) & 0xffff0000) | xx << 8 | yy
+  const xx = (packedPos & 0xfc0) >> 6;
+  const yy = packedPos & 0x3f;
+  const newPackedPos = ((packedPos << 4) & 0xffff0000) | (xx << 8) | yy;
   // return a new RoomPosition object
   const pos = new RoomPosition(0, 0, 'E0S0');
-  pos.__packedPos = newPackedPos
+  pos.__packedPos = newPackedPos;
+  if (pos.x > 49 || pos.y > 49) {
+    throw new Error('Invalid room position');
+  }
   return pos;
-}
+};
 
 /**
  * Pack a Coord to 12 bits with utf15
  */
 export const packCoord = (coord: Coord) => {
-  return packCoordList([coord])
-}
+  return packCoordList([coord]);
+};
 
 /**
  * Unpack a coord with utf15
  */
 export const unpackCoord = (str: string) => {
-  return unpackCoordList(str)[0]
-}
+  return unpackCoordList(str)[0];
+};
 
 /**
  * Pack a list of Coords as compactly as possible with utf15
  */
 export const packCoordList = (coords: Coord[]) => {
-  return coordCodec.encode(coords.map(c => (c.x << 6 | c.y)))
-}
+  return coordCodec.encode(coords.map(c => (c.x << 6) | c.y));
+};
 
 /**
  * Unpack a list of Coords as compactly as possible with utf15
  */
 export const unpackCoordList = (str: string): Coord[] => {
-  return coordCodec.decode(str).map(n => ({
-    x: (n & 0xfc0) >> 6,
-    y: n & 0x03f
-  }))
-}
+  return coordCodec.decode(str).map(n => {
+    const coord = {
+      x: (n & 0xfc0) >> 6,
+      y: n & 0x03f
+    };
+    if (coord.x > 49 || coord.y > 49) throw new Error('Invalid packed coord');
+    return coord;
+  });
+};
 
 /**
  * Pack a list of RoomPositions to two Unicode characters each with screeps-utf15
  */
 export const packPosList = (posList: RoomPosition[]) => {
   return posList.map(p => packPos(p)).join('');
-}
+};
 
 /**
  * Unpack a list of RoomPositions from two Unicode characters each
  */
 export const unpackPosList = (str: string) => {
   return str.match(/.{1,2}/g)?.map(s => unpackPos(s));
-}
+};
 
 export const roomNameToCoords = (roomName: string) => {
   let match = roomName.match(/^([WE])([0-9]+)([NS])([0-9]+)$/);
@@ -128,7 +134,7 @@ export const getRangeTo = (from: RoomPosition, to: RoomPosition) => {
   let toGlobal = globalPosition(to);
 
   return Math.max(Math.abs(fromGlobal.x - toGlobal.x), Math.abs(fromGlobal.y - toGlobal.y));
-}
+};
 
 export function posAtDirection(origin: RoomPosition, direction: DirectionConstant) {
   const offset = [
@@ -174,45 +180,47 @@ export function posAtDirection(origin: RoomPosition, direction: DirectionConstan
  * Compress a path of adjacent RoomPositions to an origin and a list of directions
  */
 export const compressPath = (path: RoomPosition[]) => {
-  const directions = []
+  const directions = [];
   const origin = path[0];
   if (!origin) return '';
   let previous = origin;
   for (const next of path.slice(1)) {
     if (getRangeTo(previous, next) !== 1) {
-      throw new Error('Cannot compress path unless each RoomPosition is adjacent to the previous one')
+      throw new Error('Cannot compress path unless each RoomPosition is adjacent to the previous one');
     }
     directions.push(previous.getDirectionTo(next));
     previous = next;
   }
   return packPos(origin) + directionsCodec.encode(directions);
-}
+};
 
 /**
  * Decompress a path from an origin and list of directions
  */
 export const decompressPath = (str: string) => {
-  let previous = unpackPos(str.slice(0, 2))
-  const path = [previous]
+  let previous = unpackPos(str.slice(0, 2));
+  const path = [previous];
   const directions = directionsCodec.decode(str.slice(2)) as DirectionConstant[];
   for (const d of directions) {
-    previous = posAtDirection(previous, d)
+    previous = posAtDirection(previous, d);
     path.push(previous);
   }
   return path;
-}
+};
 
 /**
  * Pack a list of room names as compactly as possible
  */
 export const packRoomNames = (roomNames: string[]) => {
   // encode the room position
-  return roomNameCodec.encode(roomNames.map(roomName => {
-    // split the room name
-    const [_, d1, x, d2, y] = roomName.split(/([A-Z])([0-9]+)([A-Z])([0-9]+)/);
-    return cardinals.indexOf(d1 + d2) << 14 | parseInt(x) << 7 | parseInt(y)
-  }))
-}
+  return roomNameCodec.encode(
+    roomNames.map(roomName => {
+      // split the room name
+      const [_, d1, x, d2, y] = roomName.split(/([A-Z])([0-9]+)([A-Z])([0-9]+)/);
+      return (cardinals.indexOf(d1 + d2) << 14) | (parseInt(x) << 7) | parseInt(y);
+    })
+  );
+};
 
 /**
  * Unpack a list of room names as compactly as possible
@@ -227,7 +235,7 @@ export const unpackRoomNames = (str: string) => {
     const [d1, d2] = cardinals[d1d2].split('');
     return `${d1}${x}${d2}${y}`;
   });
-}
+};
 
 /**
  * Pack a single room name into two UTF-15 characters
