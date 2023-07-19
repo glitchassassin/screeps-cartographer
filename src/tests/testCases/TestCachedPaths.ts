@@ -1,5 +1,6 @@
 import { config } from 'config';
-import { cachePath, getCachedPath, moveByPath, resetCachedPath } from '../../lib';
+import { MemoryCache } from 'lib/CachingStrategies/Memory';
+import { PositionListSerializer, cachePath, getCachedPath, moveByPath, resetCachedPath } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 
@@ -40,6 +41,14 @@ export class TestCachedPaths extends CartographerTestCase {
       }
     );
     if (!path2) throw new Error('controller1 path failed to generate');
+
+    // Test if now-incompatible cached paths break anything
+    MemoryCache.set('test_incompatible_path', 'this is not a real path and will break if we try to parse it');
+    const path = MemoryCache.with(PositionListSerializer).get('test_incompatible_path');
+    if (path !== undefined) {
+      console.log('[TestCachedPaths] Expected bogus cached path to be undefined, was', JSON.stringify(path));
+      return TestResult.FAIL;
+    }
 
     if (this.ticksRun === 1) {
       cachePath('expiration_test', this.spawn.pos, controller, { reusePath: 10 });

@@ -2,7 +2,7 @@ import { MemoryCache } from '../CachingStrategies/Memory';
 import { NumberSerializer } from '../CachingStrategies/Serializers/Number';
 import { adjacentWalkablePositions } from '../Movement/selectors';
 // import { logCpu, logCpuStart } from '../../utils/logCpu';
-import { packPos } from '../../utils/packrat';
+import { packPos } from '../../utils/packPositions';
 import { measure } from '../../utils/profiler';
 import { getMoveIntentRooms, getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
 

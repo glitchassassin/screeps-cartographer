@@ -62,6 +62,7 @@ export abstract class CartographerTestCase {
       return testResult;
     } catch (e) {
       console.log(`[${this.constructor.name}] ${e}`);
+      throw e;
       return TestResult.FAIL;
     }
   }

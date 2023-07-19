@@ -1,4 +1,4 @@
-import { packRoomName } from '../../utils/packrat';
+import { packRoomName } from '../../utils/packPositions';
 
 /**
  * Derives a cache key namespaced to a particular room

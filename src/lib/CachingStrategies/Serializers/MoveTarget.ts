@@ -1,6 +1,6 @@
+import { Codec } from 'screeps-utf15';
 import { MoveTarget, Serializer } from '../../';
-import { packPos, unpackPos } from '../../../utils/packrat';
-import { Codec } from '../../../utils/screeps-utf15';
+import { packPos, unpackPos } from '../../../utils/packPositions';
 
 /**
  * Note: this binds range at 32768, which should be plenty for MoveTarget purposes

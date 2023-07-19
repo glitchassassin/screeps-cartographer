@@ -1,4 +1,4 @@
-import { packPos } from '../../utils/packrat';
+import { packPos } from '../../utils/packPositions';
 
 interface MoveIntent {
   creep: Creep | PowerCreep;
