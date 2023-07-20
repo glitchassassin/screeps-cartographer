@@ -1,6 +1,6 @@
 import { config } from 'config';
 import { MemoryCache } from 'lib/CachingStrategies/Memory';
-import { PositionListSerializer, cachePath, getCachedPath, moveByPath, resetCachedPath } from '../../lib';
+import { PositionListSerializer, cachePath, getCachedPath, moveByPath, moveTo, resetCachedPath } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 
@@ -11,7 +11,8 @@ import { CartographerTestCase } from './CartographerTestCase';
  */
 export class TestCachedPaths extends CartographerTestCase {
   _creeps = {
-    c1: ''
+    c1: '',
+    b: ''
   };
   ticksRun = 0;
   phase = 0;
@@ -62,24 +63,30 @@ export class TestCachedPaths extends CartographerTestCase {
 
     // test begins
     new RoomVisual(this.spawn.room.name).poly(path1, { stroke: 'magenta' }).poly(path2, { stroke: 'cyan' });
+
+    // move blocker into position
+    moveTo(this.creeps.b, { pos: path1[Math.floor(path1.length / 2)], range: 0 }, { priority: 3 });
     if (this.phase === 0) {
-      if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller1');
+      if (this.creeps.b.pos.isEqualTo(path1[Math.floor(path1.length / 2)])) this.phase += 1;
     }
     if (this.phase === 1) {
-      if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller2', { reverse: true });
+      if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
+      moveByPath(this.creeps.c1, 'controller1', { repathIfStuck: 4 });
     }
     if (this.phase === 2) {
-      if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller2');
+      if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
+      moveByPath(this.creeps.c1, 'controller2', { repathIfStuck: 4, reverse: true });
     }
     if (this.phase === 3) {
+      if (this.creeps.c1.pos.inRangeTo(controller, 1)) this.phase += 1;
+      moveByPath(this.creeps.c1, 'controller2', { repathIfStuck: 4 });
+    }
+    if (this.phase === 4) {
       if (this.creeps.c1.pos.inRangeTo(this.spawn, 1)) this.phase += 1;
-      moveByPath(this.creeps.c1, 'controller1', { reverse: true });
+      moveByPath(this.creeps.c1, 'controller1', { repathIfStuck: 4, reverse: true });
     }
 
-    if (this.phase === 4) {
+    if (this.phase === 5) {
       resetCachedPath('controller1');
       resetCachedPath('controller2');
       if (!getCachedPath('controller1') && !getCachedPath('controller2')) return TestResult.PASS;

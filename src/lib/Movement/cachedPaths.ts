@@ -123,7 +123,6 @@ export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
     const index = path.findIndex(p => p.isEqualTo(creep.pos));
     if (index !== -1) {
       currentIndex = index;
-      HeapCache.set(creepKey(creep, keys.MOVE_BY_PATH_INDEX), currentIndex);
     }
   }
   // otherwise, check if it's adjacent to one end of the path
@@ -137,6 +136,7 @@ export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
     // Unable to find our location relative to the path
     return ERR_NOT_FOUND;
   }
+  HeapCache.set(creepKey(creep, keys.MOVE_BY_PATH_INDEX), currentIndex);
 
   // creep is on the path and index is valid
   let nextIndex = Math.max(0, Math.min(path.length - 1, opts?.reverse ? currentIndex - 1 : currentIndex + 1));
