@@ -66,6 +66,7 @@ export function moveByPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
       path = path.slice(stuckIndex);
     }
   }
+  if (path.length === 0) return ERR_NO_PATH;
   // need to move to the path
   return moveTo(creep, path, opts);
 }
