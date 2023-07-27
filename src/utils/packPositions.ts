@@ -23,7 +23,7 @@ export const packPos = (pos: RoomPosition) => {
   // adjust the packedPos
   const xx = (pos.__packedPos & 0xff00) >> 8;
   const yy = pos.__packedPos & 0xff;
-  const packedPos = ((pos.__packedPos >> 4) & 0xfffff000) | (xx << 6) | yy;
+  const packedPos = ((pos.__packedPos >>> 4) & 0xfffff000) | (xx << 6) | yy;
   // encode the room position
   return roomPositionCodec.encode(packedPos);
 };
