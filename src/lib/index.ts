@@ -95,7 +95,7 @@ export * from './Movement/moveByPath';
 export * from './Movement/moveTo';
 export * from './Movement/pull';
 export * from './Movement/selectors';
-export { blockSquare } from './TrafficManager/moveLedger';
+export { blockSquare, getMoveIntents } from './TrafficManager/moveLedger';
 export * from './TrafficManager/reconcileTraffic';
 
 export function preTick() {
