@@ -6,3 +6,4 @@ package-lock.json
 config.yml
 .env
 *.log
+screeps.json
