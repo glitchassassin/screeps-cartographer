@@ -1,6 +1,6 @@
 {
   "name": "screeps-cartographer",
-  "version": "1.6.4",
+  "version": "1.7.3",
   "description": "An advanced (and open source) movement library for Screeps",
   "homepage": "https://glitchassassin.github.io/screeps-cartographer/",
   "repository": {
@@ -19,7 +19,8 @@
     "test": "jest",
     "build": "rollup -c",
     "build:docs": "typedoc src/main.ts",
-    "watch": "rollup -cw"
+    "watch": "rollup -cw",
+    "watch-pserver": "rollup -cw --environment DEST:pserver"
   },
   "keywords": [
     "screeps",
@@ -41,6 +42,7 @@
     "jest": "^28.1.3",
     "rollup": "^2.78.0",
     "rollup-plugin-clear": "^2.0.7",
+    "rollup-plugin-screeps": "^1.0.1",
     "ts-jest": "^28.0.7",
     "tslib": "^2.4.0",
     "typedoc": "^0.23.10",

@@ -1,7 +1,9 @@
 dist
+dist_test
 docs
 node_modules
 package-lock.json
 config.yml
 .env
 *.log
+screeps.json

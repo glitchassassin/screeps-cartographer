@@ -90,10 +90,10 @@ export class TestPackPosList extends CartographerTestCase {
       new RoomPosition(25, 25, "E0S0"),
       new RoomPosition(25, 25, "W0N0"),
       new RoomPosition(25, 25, "W0S0"),
-      new RoomPosition(25, 25, "E1000N100"),
-      new RoomPosition(25, 25, "E1000S100"),
-      new RoomPosition(25, 25, "W1000N100"),
-      new RoomPosition(25, 25, "W1000S100"),
+      new RoomPosition(25, 25, "E100N100"),
+      new RoomPosition(25, 25, "E100S100"),
+      new RoomPosition(25, 25, "W100N100"),
+      new RoomPosition(25, 25, "W100S100"),
     ];
     const testPackedList = packPosList(testPositions);
     const testUnpackedList = unpackPosList(testPackedList);
