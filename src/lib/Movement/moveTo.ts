@@ -173,7 +173,6 @@ export const moveTo = (
     };
   } else if (slicedCachedPath?.length && pathHasAvoidTargets(slicedCachedPath, avoidTargets)) {
     // If cached path has avoid targets, we need to repath
-    console.log('repathing')
     // find the last segment of the path after all avoid targets in this room
     let lastAvoidIndex = 0;
     slicedCachedPath.forEach((pos, i) => {

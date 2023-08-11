@@ -44,7 +44,6 @@ export function moveByPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
     const creepIndex = HeapCache.get(creepKey(creep, keys.MOVE_BY_PATH_INDEX)) as number | undefined;
     // check if creep has gotten stuck or path ahead is dangerous
     if ((repath && creepIsStuck(creep, repath)) || cachedPath && pathHasAvoidTargets(slicedPath(cachedPath, creepIndex ?? 0, opts?.reverse), avoidTargets)) {
-      console.log('repathing')
       // creep is stuck on the path
       if (creepIndex !== undefined) {
         if (opts?.reverse) {
