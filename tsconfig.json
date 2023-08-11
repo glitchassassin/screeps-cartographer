@@ -70,6 +70,7 @@
   "exclude": [
     "node_modules",
     "dist",
+    "dist_test",
     "docs",
     "*.config.js"
   ]

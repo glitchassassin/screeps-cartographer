@@ -1,3 +1,4 @@
+import { slicedPath } from 'lib/WorldMap/selectors';
 import { MoveOpts, MoveTarget } from '../';
 import { config } from '../../config';
 import { CachingStrategy, PositionListSerializer } from '../CachingStrategies';
@@ -8,7 +9,7 @@ import { generatePath } from './generatePath';
 import { move } from './move';
 import { normalizeTargets } from './selectors';
 
-const cachedPathKey = (key: string) => `_poi_${key}`;
+export const cachedPathKey = (key: string) => `_poi_${key}`;
 const keys = {
   MOVE_BY_PATH_INDEX: '_cpi'
 };
@@ -147,7 +148,7 @@ export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
       ...config.DEFAULT_VISUALIZE_OPTS,
       ...opts.visualizePathStyle
     };
-    const pathSegment = opts?.reverse ? path.slice(0, currentIndex) : path.slice(nextIndex);
+    const pathSegment = slicedPath(path, currentIndex, opts?.reverse);
     // TODO - Should power creep's room prop be optional?
     creep.room?.visual.poly(
       pathSegment.filter(pos => pos.roomName === creep.room?.name),

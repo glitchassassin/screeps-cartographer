@@ -84,6 +84,11 @@ export interface MoveOpts extends PathFinderOpts {
    * Creep used capacity and body, used to calculate default terrain costs.
    */
   creepMovementInfo?: { usedCapacity: number; body: Creep['body'] };
+  /**
+   * Targets for dynamic avoidance - will re-route to path around avoidance regions
+   * if they intersect with creep's current path
+   */
+  avoidTargets?: MoveTarget[]
 }
 
 export * from './CachingStrategies';
