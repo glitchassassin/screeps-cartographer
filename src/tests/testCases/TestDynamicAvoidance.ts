@@ -46,6 +46,13 @@ export class TestDynamicAvoidance extends CartographerTestCase {
     this.avoidanceSquare = path1[6];
     if (!this.avoidanceSquare) throw new Error('could not pick avoidance square')
 
+    const avoidTargets = (room: string) => {
+      if (room === this.avoidanceSquare?.roomName) return [
+        { pos: this.avoidanceSquare, range: 3 }
+      ]
+      return [];
+    }
+
 
     // test moving by path
     if (this.phase === 0) {
@@ -56,7 +63,7 @@ export class TestDynamicAvoidance extends CartographerTestCase {
       if (this.creeps.c1.pos.inRangeTo(this.avoidanceSquare, 3)) return TestResult.FAIL; // got too close to enemy
       if (this.creeps.c1.pos.inRangeTo(this.targetPos, 3)) this.phase += 1;
       Game.rooms[this.avoidanceSquare.roomName].visual.circle(this.avoidanceSquare, { radius: 0.5, fill: '#ff0000' }).rect(this.avoidanceSquare.x - 3.5, this.avoidanceSquare.y - 3.5, 7, 7, { stroke: '#ff0000', fill: 'transparent' });
-      moveByPath(this.creeps.c1, 'pos1', { avoidTargets: [{ pos: this.avoidanceSquare, range: 3 }], visualizePathStyle: { stroke: '#ffffff' } });
+      moveByPath(this.creeps.c1, 'pos1', { avoidTargets, visualizePathStyle: { stroke: '#ffffff' } });
     }
 
     // test moving by moveTo
@@ -66,13 +73,13 @@ export class TestDynamicAvoidance extends CartographerTestCase {
     }
     if (this.phase === 3) {
       if (this.creeps.c1.pos.getRangeTo(this.spawn.pos) > 2) this.phase += 1;
-      moveTo(this.creeps.c1, this.targetPos, { avoidTargets: [], visualizePathStyle: { stroke: '#ffffff' } })
+      moveTo(this.creeps.c1, this.targetPos, { visualizePathStyle: { stroke: '#ffffff' } })
     }
     if (this.phase === 4) {
       if (this.creeps.c1.pos.inRangeTo(this.targetPos, 3)) return TestResult.PASS;
       if (this.creeps.c1.pos.inRangeTo(this.avoidanceSquare, 3)) return TestResult.FAIL; // got too close to enemy
       Game.rooms[this.avoidanceSquare.roomName].visual.circle(this.avoidanceSquare, { radius: 0.5, fill: '#ff0000' }).rect(this.avoidanceSquare.x - 3.5, this.avoidanceSquare.y - 3.5, 7, 7, { stroke: '#ff0000', fill: 'transparent' });
-      moveTo(this.creeps.c1, this.targetPos, { avoidTargets: [{ pos: this.avoidanceSquare, range: 3 }], visualizePathStyle: { stroke: '#ffffff' } })
+      moveTo(this.creeps.c1, this.targetPos, { avoidTargets, visualizePathStyle: { stroke: '#ffffff' } })
     }
     return TestResult.PENDING;
   }

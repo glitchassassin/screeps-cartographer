@@ -8,7 +8,7 @@ export interface CostMatrixOptions {
   avoidObstacleStructures?: boolean;
   avoidSourceKeepers?: boolean;
   roadCost?: number;
-  avoidTargets?: MoveTarget[]
+  avoidTargets?: (roomName: string) => MoveTarget[]
 }
 
 /**
@@ -47,7 +47,7 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
     });
   }
   if (opts.avoidTargets) {
-    opts.avoidTargets.forEach(t => {
+    opts.avoidTargets(room).forEach(t => {
       calculateNearbyPositions(t.pos, t.range).forEach(p => cm.set(p.x, p.y, 254));
     });
   }

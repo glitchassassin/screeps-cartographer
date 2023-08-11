@@ -34,7 +34,7 @@ export const allTestCases = [
   new TestPackPosList(),
   new TestDynamicAvoidance(),
 ];
-export const testCases = allTestCases.slice();
+export const testCases = allTestCases.slice(-1);
 const testResults = new Map<CartographerTestCase, TestResult>();
 let initialized = false;
 

@@ -160,7 +160,7 @@ export const moveTo = (
   const cachedPath = getCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
   const cachedMoveIndex = HeapCache.get(creepKey(creep, keys.MOVE_BY_PATH_INDEX));
   const slicedCachedPath = cachedPath && slicedPath(cachedPath, cachedMoveIndex ?? 0);
-  const avoidTargets = actualOpts.avoidTargets?.filter(t => t.pos.roomName === creep.pos.roomName) ?? [];
+  const avoidTargets = actualOpts.avoidTargets?.(creep.pos.roomName) ?? [];
   if (
     actualOpts.repathIfStuck &&
     cachedPath &&
@@ -173,21 +173,37 @@ export const moveTo = (
     };
   } else if (slicedCachedPath?.length && pathHasAvoidTargets(slicedCachedPath, avoidTargets)) {
     // If cached path has avoid targets, we need to repath
-    const reroute = generatePath(creep.pos, slicedCachedPath.map(pos => ({ pos, range: 0 })), {
+    console.log('repathing')
+    // find the last segment of the path after all avoid targets in this room
+    let lastAvoidIndex = 0;
+    slicedCachedPath.forEach((pos, i) => {
+      if (avoidTargets.some(t => t.pos.inRangeTo(pos, t.range))) {
+        lastAvoidIndex = i;
+      }
+    })
+    const remainingPath = slicedCachedPath.slice(lastAvoidIndex);
+    const reroute = generatePath(creep.pos, remainingPath.map(pos => ({ pos, range: 0 })), {
       ...actualOpts,
-      cache,
+      cache
     });
     if (!reroute) {
       // reroute failed - reset path and try again
       resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
     } else {
       // reroute succeeded - update cached path
-      const joinIndex = slicedCachedPath.findIndex((pos) => reroute[reroute.length - 1].inRangeTo(pos, 1));
-      if (joinIndex === -1) {
+      let joinIndex: number|undefined = undefined; // furthest point on remainingPath that is in range of reroute
+      for (let i = 0; i < remainingPath.length; i++) {
+        if (reroute[reroute.length - 1].inRangeTo(remainingPath[i], 1)) {
+          joinIndex = i;
+          continue;
+        }
+        if (joinIndex !== undefined) break;
+      }
+      if (joinIndex === undefined) {
         // reroute failed - reset path and try again
         resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
       } else {
-        cache.with(PositionListSerializer).set(cachedPathKey(creepKey(creep, keys.CACHED_PATH)), reroute.concat(slicedCachedPath.slice(joinIndex)), expiration);
+        cache.with(PositionListSerializer).set(cachedPathKey(creepKey(creep, keys.CACHED_PATH)), reroute.concat(remainingPath.slice(joinIndex)), expiration);
       }
     }
   }

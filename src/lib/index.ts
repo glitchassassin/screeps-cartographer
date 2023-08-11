@@ -88,7 +88,7 @@ export interface MoveOpts extends PathFinderOpts {
    * Targets for dynamic avoidance - will re-route to path around avoidance regions
    * if they intersect with creep's current path
    */
-  avoidTargets?: MoveTarget[]
+  avoidTargets?: (roomName: string) => MoveTarget[];
 }
 
 export * from './CachingStrategies';
