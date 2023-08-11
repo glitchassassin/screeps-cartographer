@@ -222,14 +222,14 @@ export const moveTo = (
     // Nearly at end of path
     let cm = configureRoomCallback(actualOpts)(creep.pos.roomName);
 
-    const byCostMatrix = (cm instanceof PathFinder.CostMatrix) ?
-      (p: RoomPosition) => (cm as PathFinder["CostMatrix"]).get(p.x, p.y) !== 255 :
+    const notBlockedOnCostMatrix = (cm instanceof PathFinder.CostMatrix) ?
+      (p: RoomPosition) => (cm as PathFinder["CostMatrix"]).get(p.x, p.y) < 254 : // 254 is used to "soft block" travel
       () => true
-    const target = !opts?.flee ?
+    const matchesTargetRange = !opts?.flee ?
       (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)) :
       (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range)
     const targets = adjacentWalkablePositions(creep.pos, true)
-      .filter((p: RoomPosition) => target(p) && byCostMatrix(p));
+      .filter((p: RoomPosition) => matchesTargetRange(p) && notBlockedOnCostMatrix(p));
     if (targets.length) {
       move(
         creep,
