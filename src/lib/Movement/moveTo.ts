@@ -1,6 +1,11 @@
 import type { MoveOpts, MoveTarget } from '..';
 import { logCpu, logCpuStart } from '../../utils/logCpu';
-import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer, PositionListSerializer } from '../CachingStrategies';
+import {
+  CachingStrategies,
+  GenericCachingStrategy,
+  MoveTargetListSerializer,
+  PositionListSerializer
+} from '../CachingStrategies';
 import { JsonSerializer } from '../CachingStrategies/Serializers/Json';
 import { creepKey } from '../Keys/Creep';
 // import { logCpu, logCpuStart } from '../../utils/logCpu';
@@ -119,6 +124,7 @@ export const moveTo = (
         // no need to move, path complete
         clearCachedPath(creep, cache);
         // register move intent to stay here or in an adjacent viable position
+        const cm = configureRoomCallback(actualOpts)(creep.pos.roomName);
         move(
           creep,
           [
@@ -126,7 +132,7 @@ export const moveTo = (
             ...adjacentWalkablePositions(creep.pos, true).filter(p =>
               normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
             )
-          ],
+          ].filter(p => cm && cm.get(p.x, p.y) !== 255),
           actualOpts.priority
         );
         return OK;
@@ -161,11 +167,7 @@ export const moveTo = (
   const cachedMoveIndex = HeapCache.get(creepKey(creep, keys.MOVE_BY_PATH_INDEX));
   const slicedCachedPath = cachedPath && slicedPath(cachedPath, cachedMoveIndex ?? 0);
   const avoidTargets = actualOpts.avoidTargets?.(creep.pos.roomName) ?? [];
-  if (
-    actualOpts.repathIfStuck &&
-    cachedPath &&
-    creepIsStuck(creep, actualOpts.repathIfStuck)
-  ) {
+  if (actualOpts.repathIfStuck && cachedPath && creepIsStuck(creep, actualOpts.repathIfStuck)) {
     resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
     actualOpts = {
       ...actualOpts,
@@ -179,18 +181,22 @@ export const moveTo = (
       if (avoidTargets.some(t => t.pos.inRangeTo(pos, t.range))) {
         lastAvoidIndex = i;
       }
-    })
-    const remainingPath = slicedCachedPath.slice(lastAvoidIndex);
-    const reroute = generatePath(creep.pos, remainingPath.map(pos => ({ pos, range: 0 })), {
-      ...actualOpts,
-      cache
     });
+    const remainingPath = slicedCachedPath.slice(lastAvoidIndex);
+    const reroute = generatePath(
+      creep.pos,
+      remainingPath.map(pos => ({ pos, range: 0 })),
+      {
+        ...actualOpts,
+        cache
+      }
+    );
     if (!reroute) {
       // reroute failed - reset path and try again
       resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
     } else {
       // reroute succeeded - update cached path
-      let joinIndex: number|undefined = undefined; // furthest point on remainingPath that is in range of reroute
+      let joinIndex: number | undefined = undefined; // furthest point on remainingPath that is in range of reroute
       for (let i = 0; i < remainingPath.length; i++) {
         if (reroute[reroute.length - 1].inRangeTo(remainingPath[i], 1)) {
           joinIndex = i;
@@ -202,7 +208,13 @@ export const moveTo = (
         // reroute failed - reset path and try again
         resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
       } else {
-        cache.with(PositionListSerializer).set(cachedPathKey(creepKey(creep, keys.CACHED_PATH)), reroute.concat(remainingPath.slice(joinIndex)), expiration);
+        cache
+          .with(PositionListSerializer)
+          .set(
+            cachedPathKey(creepKey(creep, keys.CACHED_PATH)),
+            reroute.concat(remainingPath.slice(joinIndex)),
+            expiration
+          );
       }
     }
   }
@@ -221,20 +233,18 @@ export const moveTo = (
     // Nearly at end of path
     let cm = configureRoomCallback(actualOpts)(creep.pos.roomName);
 
-    const notBlockedOnCostMatrix = (cm instanceof PathFinder.CostMatrix) ?
-      (p: RoomPosition) => (cm as PathFinder["CostMatrix"]).get(p.x, p.y) < 254 : // 254 is used to "soft block" travel
-      () => true
-    const matchesTargetRange = !opts?.flee ?
-      (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)) :
-      (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range)
-    const targets = adjacentWalkablePositions(creep.pos, true)
-      .filter((p: RoomPosition) => matchesTargetRange(p) && notBlockedOnCostMatrix(p));
+    const notBlockedOnCostMatrix =
+      cm instanceof PathFinder.CostMatrix
+        ? (p: RoomPosition) => (cm as PathFinder['CostMatrix']).get(p.x, p.y) < 254 // 254 is used to "soft block" travel
+        : () => true;
+    const matchesTargetRange = !opts?.flee
+      ? (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
+      : (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range);
+    const targets = adjacentWalkablePositions(creep.pos, true).filter(
+      (p: RoomPosition) => matchesTargetRange(p) && notBlockedOnCostMatrix(p)
+    );
     if (targets.length) {
-      move(
-        creep,
-        targets,
-        actualOpts.priority
-      );
+      move(creep, targets, actualOpts.priority);
       return OK;
     }
     // otherwise, just follow the path
