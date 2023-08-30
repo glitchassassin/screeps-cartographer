@@ -1,12 +1,16 @@
-import { MoveOpts, MoveTarget } from '..';
+import type { MoveOpts, MoveTarget } from '..';
 import { logCpu, logCpuStart } from '../../utils/logCpu';
-import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer } from '../CachingStrategies';
+import { CachingStrategies, GenericCachingStrategy, MoveTargetListSerializer, PositionListSerializer } from '../CachingStrategies';
 import { JsonSerializer } from '../CachingStrategies/Serializers/Json';
 import { creepKey } from '../Keys/Creep';
 // import { logCpu, logCpuStart } from '../../utils/logCpu';
+import { HeapCache } from 'lib/CachingStrategies/Heap';
 import { configureRoomCallback } from 'lib/CostMatrixes';
+import { pathHasAvoidTargets } from 'lib/WorldMap/pathHasAvoidTargets';
+import { slicedPath } from 'lib/WorldMap/selectors';
 import { config } from '../../config';
-import { cachePath, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
+import { generatePath } from '../Movement/generatePath';
+import { cachePath, cachedPathKey, followPath, getCachedPath, resetCachedPath } from './cachedPaths';
 import { creepIsStuck } from './creepIsStuck';
 import { move } from './move';
 import { adjacentWalkablePositions, normalizeTargets } from './selectors';
@@ -28,7 +32,8 @@ const keys = {
   CACHED_PATH: '_cp',
   CACHED_PATH_EXPIRES: '_ce',
   CACHED_PATH_TARGETS: '_ct',
-  CACHED_PATH_OPTS: '_co'
+  CACHED_PATH_OPTS: '_co',
+  MOVE_BY_PATH_INDEX: '_cpi'
 };
 
 const optCacheFields: (keyof MoveOpts)[] = [
@@ -152,10 +157,13 @@ export const moveTo = (
   );
 
   // If creep is stuck, we need to repath
-  let repathed = false;
+  const cachedPath = getCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
+  const cachedMoveIndex = HeapCache.get(creepKey(creep, keys.MOVE_BY_PATH_INDEX));
+  const slicedCachedPath = cachedPath && slicedPath(cachedPath, cachedMoveIndex ?? 0);
+  const avoidTargets = actualOpts.avoidTargets?.(creep.pos.roomName) ?? [];
   if (
     actualOpts.repathIfStuck &&
-    getCachedPath(creepKey(creep, keys.CACHED_PATH), { cache }) &&
+    cachedPath &&
     creepIsStuck(creep, actualOpts.repathIfStuck)
   ) {
     resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
@@ -163,7 +171,40 @@ export const moveTo = (
       ...actualOpts,
       ...fallbackOpts
     };
-    if (creep.name.startsWith('TestStuck')) repathed = true;
+  } else if (slicedCachedPath?.length && pathHasAvoidTargets(slicedCachedPath, avoidTargets)) {
+    // If cached path has avoid targets, we need to repath
+    // find the last segment of the path after all avoid targets in this room
+    let lastAvoidIndex = 0;
+    slicedCachedPath.forEach((pos, i) => {
+      if (avoidTargets.some(t => t.pos.inRangeTo(pos, t.range))) {
+        lastAvoidIndex = i;
+      }
+    })
+    const remainingPath = slicedCachedPath.slice(lastAvoidIndex);
+    const reroute = generatePath(creep.pos, remainingPath.map(pos => ({ pos, range: 0 })), {
+      ...actualOpts,
+      cache
+    });
+    if (!reroute) {
+      // reroute failed - reset path and try again
+      resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
+    } else {
+      // reroute succeeded - update cached path
+      let joinIndex: number|undefined = undefined; // furthest point on remainingPath that is in range of reroute
+      for (let i = 0; i < remainingPath.length; i++) {
+        if (reroute[reroute.length - 1].inRangeTo(remainingPath[i], 1)) {
+          joinIndex = i;
+          continue;
+        }
+        if (joinIndex !== undefined) break;
+      }
+      if (joinIndex === undefined) {
+        // reroute failed - reset path and try again
+        resetCachedPath(creepKey(creep, keys.CACHED_PATH), { cache });
+      } else {
+        cache.with(PositionListSerializer).set(cachedPathKey(creepKey(creep, keys.CACHED_PATH)), reroute.concat(remainingPath.slice(joinIndex)), expiration);
+      }
+    }
   }
 
   if (DEBUG) logCpu('checking if creep is stuck');
@@ -180,14 +221,14 @@ export const moveTo = (
     // Nearly at end of path
     let cm = configureRoomCallback(actualOpts)(creep.pos.roomName);
 
-    const byCostMatrix = (cm instanceof PathFinder.CostMatrix) ?
-      (p: RoomPosition) => (cm as PathFinder["CostMatrix"]).get(p.x, p.y) !== 255 :
+    const notBlockedOnCostMatrix = (cm instanceof PathFinder.CostMatrix) ?
+      (p: RoomPosition) => (cm as PathFinder["CostMatrix"]).get(p.x, p.y) < 254 : // 254 is used to "soft block" travel
       () => true
-    const target = !opts?.flee ?
+    const matchesTargetRange = !opts?.flee ?
       (p: RoomPosition) => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)) :
       (p: RoomPosition) => normalizedTargets.every(t => t.pos.getRangeTo(p) >= t.range)
     const targets = adjacentWalkablePositions(creep.pos, true)
-      .filter((p: RoomPosition) => target(p) && byCostMatrix(p));
+      .filter((p: RoomPosition) => matchesTargetRange(p) && notBlockedOnCostMatrix(p));
     if (targets.length) {
       move(
         creep,

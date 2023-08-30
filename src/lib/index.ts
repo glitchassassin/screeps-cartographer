@@ -84,6 +84,11 @@ export interface MoveOpts extends PathFinderOpts {
    * Creep used capacity and body, used to calculate default terrain costs.
    */
   creepMovementInfo?: { usedCapacity: number; body: Creep['body'] };
+  /**
+   * Targets for dynamic avoidance - will re-route to path around avoidance regions
+   * if they intersect with creep's current path
+   */
+  avoidTargets?: (roomName: string) => MoveTarget[];
 }
 
 export * from './CachingStrategies';
@@ -95,7 +100,7 @@ export * from './Movement/moveByPath';
 export * from './Movement/moveTo';
 export * from './Movement/pull';
 export * from './Movement/selectors';
-export { blockSquare } from './TrafficManager/moveLedger';
+export { blockSquare, getMoveIntents } from './TrafficManager/moveLedger';
 export * from './TrafficManager/reconcileTraffic';
 
 export function preTick() {

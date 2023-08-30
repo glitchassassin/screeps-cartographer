@@ -14,6 +14,7 @@
 - Can set movement priorities to allow higher-priority minions to path before lower-priority minions
 - Traffic management moves stationary minions out of the way of moving ones, while allowing them to keep range to a target
 - Enhanced findRoute reduces PathFinder search space with intelligent heuristics to produce optimal paths
+- Dynamically re-routes around specific targets with minimal repathing
 
 ## Roadmap
 
@@ -187,6 +188,19 @@ moveTo(
     }
   }
 );
+```
+
+### Dynamic Avoidance
+
+You can specify an `avoidTargets` callback to re-route around hostile creeps:
+
+```ts
+moveTo(creep, storage.pos, {
+  avoidTargets(room) {
+    return Game.rooms[room]?.find(FIND_HOSTILE_CREEPS)
+      .map(creep => ({pos: creep.pos, range: 3 })) ?? [];
+  }
+})
 ```
 
 ### Overriding Default Config

@@ -11,3 +11,11 @@ export const isSourceKeeperRoom = (roomName: string) => {
   // return !(fmod === 5 && smod === 5) && (fmod >= 4 && fmod <= 6) && (smod >= 4 && smod <= 6);
   return fmod >= 4 && fmod <= 6 && smod >= 4 && smod <= 6;
 };
+
+/**
+ * Returns the remaining slice of the path (not including start)
+ */
+export const slicedPath = (path: RoomPosition[], start: number, reverse?: boolean) => {
+  if (reverse) return path.slice(0, start);
+  return path.slice(start + 1);
+}

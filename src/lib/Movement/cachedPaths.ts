@@ -1,5 +1,7 @@
+import { slicedPath } from 'lib/WorldMap/selectors';
 import { MoveOpts, MoveTarget } from '../';
 import { config } from '../../config';
+import { getRangeTo } from '../../utils/packPositions';
 import { CachingStrategy, PositionListSerializer } from '../CachingStrategies';
 import { HeapCache } from '../CachingStrategies/Heap';
 import { MemoryCache } from '../CachingStrategies/Memory';
@@ -8,7 +10,7 @@ import { generatePath } from './generatePath';
 import { move } from './move';
 import { normalizeTargets } from './selectors';
 
-const cachedPathKey = (key: string) => `_poi_${key}`;
+export const cachedPathKey = (key: string) => `_poi_${key}`;
 const keys = {
   MOVE_BY_PATH_INDEX: '_cpi'
 };
@@ -126,10 +128,10 @@ export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
     }
   }
   // otherwise, check if it's adjacent to one end of the path
-  if (currentIndex === undefined && !opts?.reverse && path[0].inRangeTo(creep, 1)) {
+  if (currentIndex === undefined && !opts?.reverse && getRangeTo(path[0], creep.pos) <= 1) {
     currentIndex = -1;
   }
-  if (currentIndex === undefined && opts?.reverse && path[path.length - 1].inRangeTo(creep, 1)) {
+  if (currentIndex === undefined && opts?.reverse && getRangeTo(path[path.length - 1], creep.pos) <= 1) {
     currentIndex = path.length;
   }
   if (currentIndex === undefined) {
@@ -147,7 +149,7 @@ export function followPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
       ...config.DEFAULT_VISUALIZE_OPTS,
       ...opts.visualizePathStyle
     };
-    const pathSegment = opts?.reverse ? path.slice(0, currentIndex) : path.slice(nextIndex);
+    const pathSegment = slicedPath(path, currentIndex, opts?.reverse);
     // TODO - Should power creep's room prop be optional?
     creep.room?.visual.poly(
       pathSegment.filter(pos => pos.roomName === creep.room?.name),

@@ -2,6 +2,19 @@ import commonjs from '@rollup/plugin-commonjs';
 import resolve from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import clear from 'rollup-plugin-clear';
+import screeps from 'rollup-plugin-screeps';
+
+let cfg;
+const dest = process.env.DEST;
+const config = process.env.SCREEPS_CONFIG;
+if (config) {
+	console.log('Loading config from environment variable');
+	cfg = JSON.parse(config);
+} else if (!dest) {
+	console.log('No destination specified - code will be compiled but not uploaded');
+} else if ((cfg = require('./screeps.json')[dest]) == null) {
+	throw new Error('Invalid upload destination');
+}
 
 export default [
 	{
@@ -24,10 +37,11 @@ export default [
 			clear({ targets: ['dist'] }),
 			resolve({ rootDir: 'src' }),
 			commonjs(),
-			typescript({ tsconfig: './tsconfig.json' }) // so Rollup can convert TypeScript to JavaScript
+			typescript({ tsconfig: './tsconfig.json' }), // so Rollup can convert TypeScript to JavaScript
+			screeps({ config: cfg, dryRun: cfg == null })
 		],
 		output: {
-			file: 'dist/test.js',
+			file: 'dist_test/main.js',
 			format: 'cjs',
 			sourcemap: true
 		}

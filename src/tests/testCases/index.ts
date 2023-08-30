@@ -5,6 +5,7 @@ import { TestBlockSquare } from './TestBlockSquare';
 import { TestCachedPaths } from './TestCachedPaths';
 import { TestCPU } from './TestCPU';
 import { TestDeadlock } from './TestDeadlock';
+import { TestDynamicAvoidance } from './TestDynamicAvoidance';
 import { TestFlee } from './TestFlee';
 import { TestOpportunitySquares } from './TestOpportunitySquares';
 import { TestPackPosList } from './TestPackPosList';
@@ -30,7 +31,8 @@ export const allTestCases = [
   new TestBlockSquare(),
   new TestCPU(),
   new TestOpportunitySquares(),
-  new TestPackPosList()
+  new TestPackPosList(),
+  new TestDynamicAvoidance(),
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();

@@ -83,6 +83,26 @@ export class TestPackPosList extends CartographerTestCase {
     const decompressingCpu = Math.max(0, Game.cpu.getUsed()) - startDecompressing;
     console.log('Decompressing CPU (per pos):', decompressingCpu / (1000 * path.length))
 
+    // Test a range of other positions
+
+    const testPositions = [
+      new RoomPosition(25, 25, "E0N0"),
+      new RoomPosition(25, 25, "E0S0"),
+      new RoomPosition(25, 25, "W0N0"),
+      new RoomPosition(25, 25, "W0S0"),
+      new RoomPosition(25, 25, "E100N100"),
+      new RoomPosition(25, 25, "E100S100"),
+      new RoomPosition(25, 25, "W100N100"),
+      new RoomPosition(25, 25, "W100S100"),
+    ];
+    const testPackedList = packPosList(testPositions);
+    const testUnpackedList = unpackPosList(testPackedList);
+    if (!testUnpackedList?.every((pos, i) => pos.isEqualTo(testPositions[i]))) {
+      console.log("[TestPackPosList] Inconsistent packPosList results")
+      return TestResult.FAIL;
+    }
+
+
     return TestResult.PASS;
   }
 }

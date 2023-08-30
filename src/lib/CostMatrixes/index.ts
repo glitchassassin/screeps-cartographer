@@ -1,4 +1,5 @@
-import { MoveOpts } from 'lib';
+import { type MoveOpts, type MoveTarget } from 'lib';
+import { calculateNearbyPositions } from '../Movement/selectors';
 import { avoidSourceKeepers } from './sourceKeepers';
 
 export type CostMatrixMutator = (cm: CostMatrix, room: string) => CostMatrix;
@@ -7,6 +8,7 @@ export interface CostMatrixOptions {
   avoidObstacleStructures?: boolean;
   avoidSourceKeepers?: boolean;
   roadCost?: number;
+  avoidTargets?: (roomName: string) => MoveTarget[]
 }
 
 /**
@@ -42,6 +44,11 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
           cm.set(s.pos.x, s.pos.y, opts.roadCost);
         }
       }
+    });
+  }
+  if (opts.avoidTargets) {
+    opts.avoidTargets(room).forEach(t => {
+      calculateNearbyPositions(t.pos, t.range).forEach(p => cm.set(p.x, p.y, 254));
     });
   }
   return cm;
