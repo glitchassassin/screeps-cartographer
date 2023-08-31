@@ -124,12 +124,13 @@ export const moveTo = (
         // no need to move, path complete
         clearCachedPath(creep, cache);
         // register move intent to stay here or in an adjacent viable position
+        const cm = configureRoomCallback(actualOpts)(creep.pos.roomName);
         move(
           creep,
           [
             creep.pos,
-            ...adjacentWalkablePositions(creep.pos, true).filter(p =>
-              normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
+            ...adjacentWalkablePositions(creep.pos, true).filter(
+              p => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)) && (!cm || cm.get(p.x, p.y) !== 255) // exclude squares that are blocked by a cost matrix
             )
           ],
           actualOpts.priority
