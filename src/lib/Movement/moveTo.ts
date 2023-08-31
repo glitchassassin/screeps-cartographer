@@ -129,10 +129,10 @@ export const moveTo = (
           creep,
           [
             creep.pos,
-            ...adjacentWalkablePositions(creep.pos, true).filter(p =>
-              normalizedTargets.some(t => t.pos.inRangeTo(p, t.range))
+            ...adjacentWalkablePositions(creep.pos, true).filter(
+              p => normalizedTargets.some(t => t.pos.inRangeTo(p, t.range)) && (!cm || cm.get(p.x, p.y) !== 255) // exclude squares that are blocked by a cost matrix
             )
-          ].filter(p => cm && cm.get(p.x, p.y) !== 255),
+          ],
           actualOpts.priority
         );
         return OK;
