@@ -33,7 +33,7 @@ export function cachePath(
 
   const cache = actualOpts.cache ?? MemoryCache;
 
-  const normalizedTargets = normalizeTargets(targets, opts?.keepTargetInRoom);
+  const normalizedTargets = normalizeTargets(targets, opts?.keepTargetInRoom, opts?.flee);
 
   if (opts?.visualizePathStyle) {
     const style = {
@@ -59,7 +59,8 @@ export function cachePath(
 
   // create paths
   const path = generatePath(origin, normalizedTargets, {
-    ...actualOpts
+    ...actualOpts,
+    flee: false // flee is taken into account in normalizeTargets
   });
   if (path) {
     const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;

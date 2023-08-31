@@ -32,7 +32,7 @@ export const allTestCases = [
   new TestCPU(),
   new TestOpportunitySquares(),
   new TestPackPosList(),
-  new TestDynamicAvoidance(),
+  new TestDynamicAvoidance()
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();

@@ -126,6 +126,15 @@ export const globalPosition = (pos: RoomPosition) => {
   };
 };
 
+export const fromGlobalPosition = (pos: { x: number; y: number }) => {
+  let [wx, x] = [Math.floor(pos.x / 50), pos.x % 50];
+  let [wy, y] = [Math.floor(pos.y / 50), pos.y % 50];
+  if (wx < 0 && x < 0) x = 49 - ~x;
+  if (wy < 0 && y < 0) y = 49 - ~y;
+  let roomName = roomNameFromCoords(wx, wy);
+  return new RoomPosition(x, y, roomName);
+};
+
 export const getRangeTo = (from: RoomPosition, to: RoomPosition) => {
   if (from.roomName === to.roomName) return from.getRangeTo(to);
 

@@ -1,4 +1,6 @@
-import { Coord } from 'utils/packPositions';
+import { RoomPositionSet } from 'lib/Utils/RoomPositionSet';
+import { memoize } from 'lib/Utils/memoize';
+import { Coord, fromGlobalPosition, globalPosition } from 'utils/packPositions';
 import { MoveTarget } from '..';
 
 /**
@@ -10,29 +12,77 @@ export const isExit = (pos: RoomPosition) => pos.x === 0 || pos.y === 0 || pos.x
  * Takes a target or list of targets in a few different possible formats and
  * normalizes to a list of MoveTarget[]
  */
-export const normalizeTargets = (
-  targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
-  keepTargetInRoom = true
-) => {
-  let normalizedTargets: MoveTarget[] = [];
-  if (Array.isArray(targets)) {
-    if ('pos' in targets[0]) {
-      normalizedTargets.push(...(targets as MoveTarget[]));
+export const normalizeTargets = memoize(
+  (
+    targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
+    keepTargetInRoom = true,
+    flee = false
+  ) => {
+    let key = `${keepTargetInRoom}${flee}`;
+    if (Array.isArray(targets)) {
+      if (targets.length && 'pos' in targets[0]) {
+        key += (targets as MoveTarget[]).map(t => `${t.pos.__packedPos}_${t.range}`).join(',');
+      } else {
+        key += (targets as RoomPosition[]).map(t => t.__packedPos).join(',');
+      }
+    } else if ('pos' in targets) {
+      if ('range' in targets) {
+        key += `${targets.pos.__packedPos}_${targets.range}`;
+      } else {
+        key += `${targets.pos.__packedPos}_1`;
+      }
     } else {
-      normalizedTargets.push(...(targets as RoomPosition[]).map(pos => ({ pos, range: 0 })));
+      key += `${targets.__packedPos}_1`;
     }
-  } else if ('pos' in targets) {
-    if ('range' in targets) {
-      normalizedTargets.push(targets);
+    return key;
+  },
+  (
+    targets: _HasRoomPosition | RoomPosition | MoveTarget | RoomPosition[] | MoveTarget[],
+    keepTargetInRoom = true,
+    flee = false
+  ) => {
+    let normalizedTargets: MoveTarget[] = [];
+    if (Array.isArray(targets)) {
+      if (targets.length && 'pos' in targets[0]) {
+        normalizedTargets.push(...(targets as MoveTarget[]));
+      } else {
+        normalizedTargets.push(...(targets as RoomPosition[]).map(pos => ({ pos, range: 0 })));
+      }
+    } else if ('pos' in targets) {
+      if ('range' in targets) {
+        normalizedTargets.push(targets);
+      } else {
+        normalizedTargets.push({ pos: targets.pos, range: 1 });
+      }
     } else {
-      normalizedTargets.push({ pos: targets.pos, range: 1 });
+      normalizedTargets.push({ pos: targets, range: 1 });
     }
-  } else {
-    normalizedTargets.push({ pos: targets, range: 1 });
+
+    if (keepTargetInRoom) normalizedTargets = normalizedTargets.flatMap(fixEdgePosition);
+
+    if (flee) {
+      // map flee targets to MoveTarget[] around perimeter of target areas
+      const borders = new RoomPositionSet();
+      // visualize normalized targets
+      for (const { pos, range } of normalizedTargets) {
+        calculatePositionsAtRange(pos, range + 1)
+          .filter(p => {
+            if (!isPositionWalkable(p, true, false)) return false;
+            if (keepTargetInRoom && (p.roomName !== pos.roomName || isExit(p))) return false;
+            return true;
+          })
+          .forEach(p => borders.add(p));
+      }
+      for (const pos of borders) {
+        if (normalizedTargets.some(t => t.pos.inRangeTo(pos, t.range))) {
+          borders.delete(pos);
+        }
+      }
+      normalizedTargets = [...borders].map(pos => ({ pos, range: 0 }));
+    }
+    return normalizedTargets;
   }
-  if (keepTargetInRoom) normalizedTargets = normalizedTargets.flatMap(fixEdgePosition);
-  return normalizedTargets;
-};
+);
 
 /**
  * If a MoveTarget's position and range overlaps a room edge, this will split
@@ -101,6 +151,23 @@ export const calculateNearbyPositions = (pos: RoomPosition, proximity: number, i
     .filter(roomPos => roomPos !== null) as RoomPosition[];
   if (includeCenter) adjacent.push(pos);
   return adjacent;
+};
+
+/**
+ * Positions at `proximity` of `pos`
+ */
+export const calculatePositionsAtRange = (pos: RoomPosition, proximity: number) => {
+  const globalPos = globalPosition(pos);
+  let positions: RoomPosition[] = [];
+  for (let x = globalPos.x - proximity; x <= globalPos.x + proximity; x++) {
+    positions.push(fromGlobalPosition({ x, y: globalPos.y - proximity }));
+    positions.push(fromGlobalPosition({ x, y: globalPos.y + proximity }));
+  }
+  for (let y = globalPos.y - proximity + 1; y <= globalPos.y + proximity - 1; y++) {
+    positions.push(fromGlobalPosition({ x: globalPos.x - proximity, y }));
+    positions.push(fromGlobalPosition({ x: globalPos.x + proximity, y }));
+  }
+  return positions;
 };
 
 /**
