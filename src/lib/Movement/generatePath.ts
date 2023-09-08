@@ -18,18 +18,17 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
     actualOpts = { ...actualOpts, ...defaultTerrainCosts(opts.creepMovementInfo) };
   }
 
-  // check if we need a route to limit search space
-  // if there are multiple rooms in `targets`, pick the cheapest route
+  // generate a route to limit search space
   const targetRooms = targets.reduce(
     (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
     [] as string[]
   );
   let routes = findRoute(origin.roomName, targetRooms, actualOpts);
 
-  // generate path(s)
+  // generate path for each route segment
   if (!routes?.length || routes.length === 1) {
     const rooms = routes?.[0]?.rooms;
-    // No portals
+    // No portals - just generate a single path
     const result = PathFinder.search(origin, targets, {
       ...actualOpts,
       maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
@@ -39,12 +38,13 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
 
     return result.path;
   } else {
-    // Generate paths to each portalSet and then merge
+    // Generate paths to each portalSet and then merge into a single path
     let workingOrigin = origin;
     const path: RoomPosition[] = [];
 
     for (const route of routes) {
       if (!route.portalSet) {
+        // no portal set - this is the last segment of the path, go to the actual targets
         const result = PathFinder.search(workingOrigin, targets, {
           ...actualOpts,
           maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
@@ -53,6 +53,7 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
         if (!result.path.length || result.incomplete) return undefined;
         path.push(...result.path);
       } else {
+        // portal set - pathfind to the closest portal in the portalset
         const lastRoom = route.rooms.includes(route.portalSet.room1) ? route.portalSet.room1 : route.portalSet.room2;
         const portalTargets = (
           lastRoom === route.portalSet.room1
@@ -69,7 +70,7 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
         const portal = portalTargets.find(t => t.pos.isNearTo(result.path[result.path.length - 1]))!.pos;
         path.push(...result.path, portal);
 
-        // Update working origin with next portal
+        // The next path begins at the destination of the target portal
         if (route.portalSet.room1 === lastRoom) {
           const destination = route.portalSet.portalMap.get(portal);
           if (!destination)

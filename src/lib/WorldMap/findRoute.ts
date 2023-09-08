@@ -18,7 +18,7 @@ export function findRoute(
     ...config.DEFAULT_MOVE_OPTS,
     ...opts
   };
-
+  // prepare routeCallback
   const memoizedRouteCallback = memoize(
     (roomName, fromRoomName) => roomName + fromRoomName,
     (roomName: string, fromRoomName: string): number | undefined => {
@@ -30,7 +30,7 @@ export function findRoute(
     }
   );
 
-  // Generate base route
+  // Generate base route, taking portals into account
   const generatedRoutes = findRouteWithPortals(
     room1,
     targetRooms,
@@ -41,6 +41,7 @@ export function findRoute(
   );
   if (generatedRoutes === ERR_NO_PATH) return undefined;
 
+  // enhance the route with extra rooms to improve pathfinding
   return generatedRoutes.map(route => {
     const rooms = enhanceRoute(route, memoizedRouteCallback, actualOpts);
     return {
@@ -50,7 +51,10 @@ export function findRoute(
   });
 }
 
-// Enhance route
+/**
+ * Adds extra rooms to a given route to improve pathfinding (e.g. routing through
+ * an inside corner when the route turns)
+ */
 function enhanceRoute(
   route: { exit?: ExitConstant; room: string }[],
   memoizedRouteCallback: (room: string, fromRoom: string) => number | undefined,
@@ -210,7 +214,8 @@ const manhattanDistanceToClosestPortal = memoizeByTick(
 
 /**
  * Normal A* heuristic would just be the manhattan distance - here we
- * must include distance to the nearest portals as well
+ * must include distance to the nearest portals as well. This is still
+ * an admissible heuristic: https://stackoverflow.com/a/14428389
  */
 function findRouteHeuristic(fromRoom: string, toRoom: string) {
   return Math.min(
@@ -220,7 +225,7 @@ function findRouteHeuristic(fromRoom: string, toRoom: string) {
 }
 
 /**
- * Returns a sequence of rooms. Exits between rooms may be normal room exits or portals.
+ * Returns a sequence of rooms. Exits between rooms may be normal room exits or a portal set.
  */
 export function findRouteWithPortals(
   fromRoom: string,
@@ -265,9 +270,11 @@ export function findRouteWithPortals(
       const previous: string = cameFrom.get(current)!;
       const portalSet = portalSets.get(previous)?.get(current);
       if (portalSet && !avoidPortals) {
+        // there's a portal between these two rooms - use it
         paths.unshift(path);
         path = [{ room: previous, portalSet }];
       } else {
+        // no portal - must be a regular exit
         const exit = Game.map.findExit(previous, current);
         path.unshift({
           room: previous,

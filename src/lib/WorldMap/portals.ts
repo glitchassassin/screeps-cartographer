@@ -47,9 +47,9 @@ export function scanPortals(room: string) {
 
   // cleanup old portal sets
   const portalSetMap = portalSets.get(room);
-  for (const [to, portalSet] of portalSetMap?.entries() ?? []) {
-    if (!observedTargets.has(to) || (portalSet.expires && portalSet.expires < Game.time)) {
-      // this connection has disappeared or expired
+  for (const to of portalSetMap?.keys() ?? []) {
+    if (!observedTargets.has(to)) {
+      // this connection has disappeared
       portalSets.get(room)?.delete(to);
       portalSets.get(to)?.delete(room);
     }
@@ -62,10 +62,18 @@ export function cachePortals() {
   Memory[config.MEMORY_PORTAL_PATH] = [];
   for (const portalSetMap of portalSets.values()) {
     for (const portalSet of portalSetMap.values()) {
-      if (!allPortalSets.has(portalSet)) {
-        Memory[config.MEMORY_PORTAL_PATH].push(serializePortalSet(portalSet));
-      }
+      if (allPortalSets.has(portalSet)) continue;
       allPortalSets.add(portalSet);
+
+      // check if portalSet is expired
+      if (portalSet.expires && portalSet.expires < Game.time) {
+        portalSets.get(portalSet.room1)?.delete(portalSet.room2);
+        portalSets.get(portalSet.room2)?.delete(portalSet.room1);
+        continue;
+      }
+
+      // otherwise, cache the portalSet
+      Memory[config.MEMORY_PORTAL_PATH].push(serializePortalSet(portalSet));
     }
   }
 }
