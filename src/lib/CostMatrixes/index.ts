@@ -1,4 +1,5 @@
 import { type MoveOpts, type MoveTarget } from 'lib';
+import { portalSets } from 'lib/WorldMap/portals';
 import { calculateNearbyPositions } from '../Movement/selectors';
 import { avoidSourceKeepers } from './sourceKeepers';
 
@@ -45,17 +46,20 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
           cm.set(s.pos.x, s.pos.y, opts.roadCost);
         }
       }
-      if (!opts.ignorePortals) {
-        if (s.structureType === STRUCTURE_PORTAL) {
-          cm.set(s.pos.x, s.pos.y, 255);
-        }
-      }
     });
   }
   if (opts.avoidTargets) {
     opts.avoidTargets(room).forEach(t => {
       calculateNearbyPositions(t.pos, t.range).forEach(p => cm.set(p.x, p.y, 254));
     });
+  }
+
+  if (!opts.ignorePortals) {
+    const portalCoords = [...(portalSets.get(room)?.values() ?? [])].flatMap(p => {
+      if (room === p.room1) return [...p.portalMap.keys()];
+      return [...p.portalMap.reversed.keys()];
+    });
+    portalCoords.forEach(c => cm.set(c.x, c.y, 255));
   }
   return cm;
 };
