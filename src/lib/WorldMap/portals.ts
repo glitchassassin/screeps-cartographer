@@ -2,6 +2,7 @@ import { config } from 'config';
 import { CoordMap } from 'lib/Utils/CoordMap';
 import { Codec } from 'screeps-utf15';
 import { packCoordList, packRoomName, unpackCoordList, unpackRoomName } from 'utils/packPositions';
+import { isCenterRoom, isHighway } from './selectors';
 
 const timeCodec = new Codec({ array: false, depth: 30 });
 
@@ -20,8 +21,10 @@ for (const serializedPortalSet of Memory[config.MEMORY_PORTAL_PATH]) {
   const portalSet = deserializePortalSet(serializedPortalSet);
   const originMap = portalSets.get(portalSet.room1) ?? new Map<string, PortalSet>();
   originMap.set(portalSet.room2, portalSet);
+  portalSets.set(portalSet.room1, originMap);
   const destinationMap = portalSets.get(portalSet.room2) ?? new Map<string, PortalSet>();
   destinationMap.set(portalSet.room1, portalSet);
+  portalSets.set(portalSet.room2, destinationMap);
 }
 
 /**
@@ -30,6 +33,9 @@ for (const serializedPortalSet of Memory[config.MEMORY_PORTAL_PATH]) {
  * (but the `room1` and `room2` don't necessarily correspond to the lookup order)
  */
 export function scanPortals(room: string) {
+  // only scan highways and center rooms to save CPU
+  if (!isHighway(room) && !isCenterRoom(room)) return;
+
   const observedTargets = new Set<string>();
   for (const portalSet of collectIntrashardPortals(room)) {
     const originMap = portalSets.get(portalSet.room1) ?? new Map<string, PortalSet>();
@@ -89,6 +95,7 @@ function collectIntrashardPortals(room: string): PortalSet[] {
       room2: portal.destination.roomName,
       portalMap: new CoordMap()
     };
+    portalSets.set(portal.destination.roomName, mapping);
     mapping.portalMap.set(portal.pos, portal.destination);
     if (portal.ticksToDecay) {
       mapping.expires = Game.time + portal.ticksToDecay;

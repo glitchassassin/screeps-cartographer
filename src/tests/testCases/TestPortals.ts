@@ -19,6 +19,7 @@ export class TestPortals extends CartographerTestCase {
   timeout = 500; // ticks
   findRoute = false;
   generatedPath = false;
+  crossedPortal = false;
   test() {
     // hard-code portals, in case they haven't been discovered by scouts yet
     const portalSet = { room1: 'W0N5', room2: 'W10N5', portalMap: new CoordMap() };
@@ -33,7 +34,7 @@ export class TestPortals extends CartographerTestCase {
 
     // Test findRoute
     if (!this.findRoute) {
-      const route = findRouteWithPortals('W2N5', ['W10N6'], undefined);
+      const route = findRouteWithPortals('W2N5', ['W10N6'], undefined, true);
       // should generate two segments - W2N5-W0N5, portal, W10N5-W10N6
       const targetRoute = ['W2N5', 'W2N6', 'W1N6', 'W0N6', 'W0N5', 'W10N5', 'W10N6'];
       if (
@@ -44,10 +45,10 @@ export class TestPortals extends CartographerTestCase {
           .map(r => r.room)
           .every((r, i) => r === targetRoute[i])
       ) {
-        // console.log('Bad route:', JSON.stringify(route));
+        console.log('Bad route:', JSON.stringify(route));
         return TestResult.FAIL;
       } else {
-        // console.log('Good route:', JSON.stringify(route));
+        console.log('Good route:', JSON.stringify(route));
         this.findRoute = true;
       }
     }
@@ -56,10 +57,9 @@ export class TestPortals extends CartographerTestCase {
     moveTo(this.creeps.c1, { pos: new RoomPosition(25, 25, 'W10N6'), range: 20 });
     if (this.creeps.c1.pos.isEqualTo(new RoomPosition(25, 25, 'W10N5'))) {
       // used the portal successfully
-      return TestResult.PASS;
-    } else if (this.creeps.c1.pos.roomName === 'W9N5') {
-      // creep got there without using the portal
-      return TestResult.FAIL;
+      this.crossedPortal = true;
+    } else if (this.creeps.c1.pos.roomName === 'W10N6') {
+      return this.crossedPortal ? TestResult.PASS : TestResult.FAIL;
     }
 
     return TestResult.PENDING;

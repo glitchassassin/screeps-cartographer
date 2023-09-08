@@ -1,4 +1,4 @@
-import { memoize } from 'lib/Utils/memoize';
+import { memoize, memoizeByTick } from 'lib/Utils/memoize';
 import { roomNameToCoords } from 'utils/packPositions';
 import { MoveOpts } from '../';
 import { config } from '../../config';
@@ -181,12 +181,37 @@ class PriorityQueue<T> {
   }
 }
 
-function findRouteHeuristic(fromRoom: string, toRoom: string) {
-  const { wx: fromX, wy: fromY } = roomNameToCoords(fromRoom);
-  const { wx: toX, wy: toY } = roomNameToCoords(toRoom);
+const manhattanDistance = memoizeByTick(
+  (fromRoom, toRoom) => fromRoom + toRoom,
+  (fromRoom: string, toRoom: string) => {
+    const { wx: fromX, wy: fromY } = roomNameToCoords(fromRoom);
+    const { wx: toX, wy: toY } = roomNameToCoords(toRoom);
 
-  // Manhattan distance
-  return Math.abs(fromX - toX) + Math.abs(fromY - toY);
+    // Manhattan distance
+    return Math.abs(fromX - toX) + Math.abs(fromY - toY);
+  }
+);
+
+const manhattanDistanceToClosestPortal = memoizeByTick(
+  room => room,
+  (room: string) => {
+    let minDistance = Infinity;
+    for (const portal of portalSets.keys()) {
+      minDistance = Math.min(minDistance, manhattanDistance(room, portal));
+    }
+    return minDistance;
+  }
+);
+
+/**
+ * Normal A* heuristic would just be the manhattan distance - here we
+ * must include distance to the nearest portals as well
+ */
+function findRouteHeuristic(fromRoom: string, toRoom: string) {
+  return Math.min(
+    manhattanDistance(fromRoom, toRoom),
+    manhattanDistanceToClosestPortal(fromRoom) + manhattanDistanceToClosestPortal(toRoom)
+  );
 }
 
 /**
@@ -195,7 +220,8 @@ function findRouteHeuristic(fromRoom: string, toRoom: string) {
 export function findRouteWithPortals(
   fromRoom: string,
   toRooms: string[],
-  opts?: RouteOptions
+  opts?: RouteOptions,
+  debug?: boolean
 ): { room: string; exit?: ExitConstant; portalSet?: PortalSet }[][] | ERR_NO_PATH {
   if (toRooms.includes(fromRoom)) return [];
 
@@ -217,7 +243,7 @@ export function findRouteWithPortals(
       const cost = costSoFar.get(current)! + routeCallback(current, next);
       if (!costSoFar.has(next) || cost < costSoFar.get(next)!) {
         costSoFar.set(next, cost);
-        const priority = cost; // + Math.min(...toRooms.map(toRoom => findRouteHeuristic(next, toRoom)));
+        const priority = cost + Math.min(...toRooms.map(toRoom => findRouteHeuristic(next, toRoom)));
         frontier.put(next, priority);
         cameFrom.set(next, current);
       }

@@ -3,6 +3,11 @@ export const isHighway = (roomName: string) => {
   if (!parsed) throw new Error('Invalid room name');
   return Number(parsed[1]) % 10 === 0 || Number(parsed[2]) % 10 === 0;
 };
+export const isCenterRoom = (roomName: string) => {
+  let parsed = roomName.match(/^[WE]([0-9]+)[NS]([0-9]+)$/);
+  if (!parsed) throw new Error('Invalid room name');
+  return Number(parsed[1]) % 10 === 5 && Number(parsed[2]) % 10 === 5;
+};
 export const isSourceKeeperRoom = (roomName: string) => {
   let parsed = roomName.match(/^[WE]([0-9]+)[NS]([0-9]+)$/);
   if (!parsed) throw new Error('Invalid room name');
@@ -18,4 +23,4 @@ export const isSourceKeeperRoom = (roomName: string) => {
 export const slicedPath = (path: RoomPosition[], start: number, reverse?: boolean) => {
   if (reverse) return path.slice(0, start);
   return path.slice(start + 1);
-}
+};
