@@ -45,10 +45,10 @@ export class TestPortals extends CartographerTestCase {
           .map(r => r.room)
           .every((r, i) => r === targetRoute[i])
       ) {
-        console.log('Bad route:', JSON.stringify(route));
+        // console.log('Bad route:', JSON.stringify(route));
         return TestResult.FAIL;
       } else {
-        console.log('Good route:', JSON.stringify(route));
+        // console.log('Good route:', JSON.stringify(route));
         this.findRoute = true;
       }
     }
