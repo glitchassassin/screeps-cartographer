@@ -54,24 +54,22 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
         path.push(...result.path);
       } else {
         const lastRoom = route.rooms.includes(route.portalSet.room1) ? route.portalSet.room1 : route.portalSet.room2;
-        const portalTargets =
+        const portalTargets = (
           lastRoom === route.portalSet.room1
             ? [...route.portalSet.portalMap.keys()]
-            : [...route.portalSet.portalMap.values()];
-        const result = PathFinder.search(
-          workingOrigin,
-          portalTargets.map(coord => new RoomPosition(coord.x, coord.y, lastRoom)),
-          {
-            ...actualOpts,
-            maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
-            roomCallback: configureRoomCallback(actualOpts, route.rooms)
-          }
-        );
+            : [...route.portalSet.portalMap.values()]
+        ).map(coord => ({ pos: new RoomPosition(coord.x, coord.y, lastRoom), range: 1 }));
+        const result = PathFinder.search(workingOrigin, portalTargets, {
+          ...actualOpts,
+          maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
+          roomCallback: configureRoomCallback(actualOpts, route.rooms)
+        });
         if (!result.path.length || result.incomplete) return undefined;
-        path.push(...result.path);
+        // paths to range 1 of portal - select a portal at the end of the path
+        const portal = portalTargets.find(t => t.pos.isNearTo(result.path[result.path.length - 1]))!.pos;
+        path.push(...result.path, portal);
 
         // Update working origin with next portal
-        const portal = result.path[result.path.length - 1];
         if (route.portalSet.room1 === lastRoom) {
           const destination = route.portalSet.portalMap.get(portal);
           if (!destination)

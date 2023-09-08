@@ -7,8 +7,9 @@ export interface CostMatrixOptions {
   avoidCreeps?: boolean;
   avoidObstacleStructures?: boolean;
   avoidSourceKeepers?: boolean;
+  ignorePortals?: boolean;
   roadCost?: number;
-  avoidTargets?: (roomName: string) => MoveTarget[]
+  avoidTargets?: (roomName: string) => MoveTarget[];
 }
 
 /**
@@ -44,6 +45,11 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
           cm.set(s.pos.x, s.pos.y, opts.roadCost);
         }
       }
+      if (!opts.ignorePortals) {
+        if (s.structureType === STRUCTURE_PORTAL) {
+          cm.set(s.pos.x, s.pos.y, 255);
+        }
+      }
     });
   }
   if (opts.avoidTargets) {
@@ -54,11 +60,10 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
   return cm;
 };
 
-
 export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string[]) => (room: string) => {
   if (targetRooms && !targetRooms.includes(room)) return false; // outside route search space
   let cm = actualOpts.roomCallback?.(room);
   if (cm === false) return cm;
   const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
   return mutateCostMatrix(cloned, room, actualOpts);
-}
+};

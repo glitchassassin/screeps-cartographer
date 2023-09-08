@@ -31,9 +31,14 @@ export function findRoute(
   );
 
   // Generate base route
-  const generatedRoutes = findRouteWithPortals(room1, targetRooms, {
-    routeCallback: memoizedRouteCallback
-  });
+  const generatedRoutes = findRouteWithPortals(
+    room1,
+    targetRooms,
+    {
+      routeCallback: memoizedRouteCallback
+    },
+    actualOpts.avoidPortals
+  );
   if (generatedRoutes === ERR_NO_PATH) return undefined;
 
   return generatedRoutes.map(route => {
@@ -221,7 +226,7 @@ export function findRouteWithPortals(
   fromRoom: string,
   toRooms: string[],
   opts?: RouteOptions,
-  debug?: boolean
+  avoidPortals?: boolean
 ): { room: string; exit?: ExitConstant; portalSet?: PortalSet }[][] | ERR_NO_PATH {
   if (toRooms.includes(fromRoom)) return [];
 
@@ -259,7 +264,7 @@ export function findRouteWithPortals(
     while (current !== fromRoom) {
       const previous: string = cameFrom.get(current)!;
       const portalSet = portalSets.get(previous)?.get(current);
-      if (portalSet) {
+      if (portalSet && !avoidPortals) {
         paths.unshift(path);
         path = [{ room: previous, portalSet }];
       } else {
