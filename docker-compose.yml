@@ -13,7 +13,7 @@ services:
       - 8080:8080/tcp
     restart: unless-stopped
   screeps:
-    image: screepers/screeps-launcher
+    image: jomik/screeps-server:edge
     volumes:
       - ./config.yml:/screeps/config.yml
       - screeps-data:/screeps
@@ -23,6 +23,10 @@ services:
       MONGO_HOST: mongo
       REDIS_HOST: redis
     restart: unless-stopped
+
+  curl:
+    image: quay.io/curl/curl:latest
+    network_mode: 'service:screeps'
 
   mongo:
     image: mongo

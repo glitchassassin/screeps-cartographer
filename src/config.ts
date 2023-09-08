@@ -26,5 +26,6 @@ export const config = {
     opacity: 0.1
   } as PolyStyle,
   MEMORY_CACHE_PATH: '_cg',
-  MEMORY_CACHE_EXPIRATION_PATH: '_cge'
+  MEMORY_CACHE_EXPIRATION_PATH: '_cge',
+  MEMORY_PORTAL_PATH: '_cgp'
 };

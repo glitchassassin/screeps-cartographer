@@ -1,13 +1,19 @@
 import { memoize } from 'lib/Utils/memoize';
+import { roomNameToCoords } from 'utils/packPositions';
 import { MoveOpts } from '../';
 import { config } from '../../config';
+import { PortalSet, describeExitsWithPortals, portalSets } from './portals';
 import { isHighway, isSourceKeeperRoom } from './selectors';
 
 /**
  * Uses findRoute to create a base route, then enhances
  * it by adding rooms (up to maxRooms) to improve pathfinding
  */
-export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
+export function findRoute(
+  room1: string,
+  targetRooms: string[],
+  opts?: MoveOpts
+): { rooms: string[]; portalSet?: PortalSet }[] | undefined {
   const actualOpts = {
     ...config.DEFAULT_MOVE_OPTS,
     ...opts
@@ -25,20 +31,26 @@ export function findRoute(room1: string, room2: string, opts?: MoveOpts) {
   );
 
   // Generate base route
-  let generatedRoute = Game.map.findRoute(room1, room2, {
+  const generatedRoutes = findRouteWithPortals(room1, targetRooms, {
     routeCallback: memoizedRouteCallback
   });
-  if (generatedRoute === ERR_NO_PATH) return undefined;
-  // map from "take this exit to this room" to "in this room, take this exit"
-  const route: { exit?: ExitConstant; room: string }[] = [];
-  for (let i = 0; i < generatedRoute.length + 1; i++) {
-    route.push({
-      room: generatedRoute[i - 1]?.room ?? room1,
-      exit: generatedRoute[i]?.exit
-    });
-  }
+  if (generatedRoutes === ERR_NO_PATH) return undefined;
 
-  // Enhance route
+  return generatedRoutes.map(route => {
+    const rooms = enhanceRoute(route, memoizedRouteCallback, actualOpts);
+    return {
+      rooms,
+      portalSet: route[route.length - 1]?.portalSet
+    };
+  });
+}
+
+// Enhance route
+function enhanceRoute(
+  route: { exit?: ExitConstant; room: string }[],
+  memoizedRouteCallback: (room: string, fromRoom: string) => number | undefined,
+  actualOpts: MoveOpts
+) {
   let rooms = new Set(route.map(({ room }) => room));
   let blockedRooms = new Set<string>();
   const maxRooms = actualOpts.maxRooms!;
@@ -149,4 +161,93 @@ function exitTileByIndex(exit: ExitConstant, index: number) {
   if (exit === FIND_EXIT_BOTTOM) return { x: index, y: 49 };
   if (exit === FIND_EXIT_LEFT) return { x: 0, y: index };
   return { x: 49, y: index }; // FIND_EXIT_RIGHT
+}
+
+class PriorityQueue<T> {
+  private queue: [number, T][] = [];
+
+  put(item: T, priority: number) {
+    let insertIndex = this.queue.findIndex(([p]) => p > priority);
+    if (insertIndex === -1) insertIndex = this.queue.length;
+    this.queue.splice(insertIndex, 0, [priority, item]);
+  }
+  take() {
+    return this.queue.shift()?.[1];
+  }
+  *[Symbol.iterator]() {
+    for (const [_, item] of this.queue) {
+      yield item;
+    }
+  }
+}
+
+function findRouteHeuristic(fromRoom: string, toRoom: string) {
+  const { wx: fromX, wy: fromY } = roomNameToCoords(fromRoom);
+  const { wx: toX, wy: toY } = roomNameToCoords(toRoom);
+
+  // Manhattan distance
+  return Math.abs(fromX - toX) + Math.abs(fromY - toY);
+}
+
+/**
+ * Returns a sequence of rooms. Exits between rooms may be normal room exits or portals.
+ */
+export function findRouteWithPortals(
+  fromRoom: string,
+  toRooms: string[],
+  opts?: RouteOptions
+): { room: string; exit?: ExitConstant; portalSet?: PortalSet }[][] | ERR_NO_PATH {
+  if (toRooms.includes(fromRoom)) return [];
+
+  const routeCallback = opts?.routeCallback ?? (() => 1);
+
+  // A* search, using describeExits to map the grid
+  const frontier = new PriorityQueue<string>();
+  frontier.put(fromRoom, 0);
+  const cameFrom = new Map<string, string>();
+  const costSoFar = new Map<string, number>();
+  cameFrom.set(fromRoom, fromRoom);
+  costSoFar.set(fromRoom, 0);
+
+  let current = frontier.take();
+  while (current) {
+    if (toRooms.includes(current)) break;
+
+    for (const next of describeExitsWithPortals(current)) {
+      const cost = costSoFar.get(current)! + routeCallback(current, next);
+      if (!costSoFar.has(next) || cost < costSoFar.get(next)!) {
+        costSoFar.set(next, cost);
+        const priority = cost; // + Math.min(...toRooms.map(toRoom => findRouteHeuristic(next, toRoom)));
+        frontier.put(next, priority);
+        cameFrom.set(next, current);
+      }
+    }
+
+    current = frontier.take();
+  }
+
+  if (current && toRooms.includes(current)) {
+    // reconstruct path
+    const paths: { room: string; exit?: ExitConstant; portalSet?: PortalSet }[][] = [];
+    let path: { room: string; exit?: ExitConstant; portalSet?: PortalSet }[] = [{ room: current }];
+    while (current !== fromRoom) {
+      const previous: string = cameFrom.get(current)!;
+      const portalSet = portalSets.get(previous)?.get(current);
+      if (portalSet) {
+        paths.unshift(path);
+        path = [{ room: previous, portalSet }];
+      } else {
+        const exit = Game.map.findExit(previous, current);
+        path.unshift({
+          room: previous,
+          exit: exit === ERR_NO_PATH ? undefined : (exit as ExitConstant)
+        });
+      }
+      current = previous;
+    }
+    paths.unshift(path);
+    return paths;
+  }
+
+  return ERR_NO_PATH;
 }

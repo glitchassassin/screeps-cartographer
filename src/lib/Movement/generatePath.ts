@@ -19,31 +19,75 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
   }
 
   // check if we need a route to limit search space
-  const exits = Object.values(Game.map.describeExits(origin.roomName));
-  let rooms: string[] | undefined = undefined;
-  if (!targets.some(({ pos }) => pos.roomName === origin.roomName)) {
-    // if there are multiple rooms in `targets`, pick the cheapest route
-    const targetRooms = targets.reduce(
-      (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
-      [] as string[]
-    );
-    for (const room of targetRooms) {
-      const route = findRoute(origin.roomName, room, actualOpts);
-      if (route && (!rooms || route.length < rooms.length)) {
-        rooms = route;
+  // if there are multiple rooms in `targets`, pick the cheapest route
+  const targetRooms = targets.reduce(
+    (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
+    [] as string[]
+  );
+  let routes = findRoute(origin.roomName, targetRooms, actualOpts);
+
+  // generate path(s)
+  if (!routes?.length || routes.length === 1) {
+    const rooms = routes?.[0]?.rooms;
+    // No portals
+    const result = PathFinder.search(origin, targets, {
+      ...actualOpts,
+      maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
+      roomCallback: configureRoomCallback(actualOpts, rooms)
+    });
+    if (!result.path.length || result.incomplete) return undefined;
+
+    return result.path;
+  } else {
+    // Generate paths to each portalSet and then merge
+    let workingOrigin = origin;
+    const path: RoomPosition[] = [];
+
+    for (const route of routes) {
+      if (!route.portalSet) {
+        const result = PathFinder.search(workingOrigin, targets, {
+          ...actualOpts,
+          maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
+          roomCallback: configureRoomCallback(actualOpts, route.rooms)
+        });
+        if (!result.path.length || result.incomplete) return undefined;
+        path.push(...result.path);
+      } else {
+        const lastRoom = route.rooms.includes(route.portalSet.room1) ? route.portalSet.room1 : route.portalSet.room2;
+        const portalTargets =
+          lastRoom === route.portalSet.room1
+            ? [...route.portalSet.portalMap.keys()]
+            : [...route.portalSet.portalMap.values()];
+        const result = PathFinder.search(
+          workingOrigin,
+          portalTargets.map(coord => new RoomPosition(coord.x, coord.y, lastRoom)),
+          {
+            ...actualOpts,
+            maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
+            roomCallback: configureRoomCallback(actualOpts, route.rooms)
+          }
+        );
+        if (!result.path.length || result.incomplete) return undefined;
+        path.push(...result.path);
+
+        // Update working origin with next portal
+        const portal = result.path[result.path.length - 1];
+        if (route.portalSet.room1 === lastRoom) {
+          const destination = route.portalSet.portalMap.get(portal);
+          if (!destination)
+            throw new Error(`Portal ${portal} not found in portalSet ${JSON.stringify(route.portalSet)}`);
+          workingOrigin = new RoomPosition(destination.x, destination.y, route.portalSet.room2);
+        } else {
+          const destination = route.portalSet.portalMap.reversed.get(portal);
+          if (!destination)
+            throw new Error(`Portal ${portal} not found in portalSet ${JSON.stringify(route.portalSet)}`);
+          workingOrigin = new RoomPosition(destination.x, destination.y, route.portalSet.room1);
+        }
       }
     }
-    // console.log('generated path from', origin.roomName, 'to', targetRooms, ':', rooms);
-  }
-  // generate path
-  const result = PathFinder.search(origin, targets, {
-    ...actualOpts,
-    maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
-    roomCallback: configureRoomCallback(actualOpts, rooms)
-  });
-  if (!result.path.length || result.incomplete) return undefined;
 
-  return result.path;
+    return path;
+  }
 }
 
 function defaultTerrainCosts(

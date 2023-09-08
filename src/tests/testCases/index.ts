@@ -9,6 +9,7 @@ import { TestDynamicAvoidance } from './TestDynamicAvoidance';
 import { TestFlee } from './TestFlee';
 import { TestOpportunitySquares } from './TestOpportunitySquares';
 import { TestPackPosList } from './TestPackPosList';
+import { TestPortals } from './TestPortals';
 import { TestPriority } from './TestPriority';
 import { TestPulling } from './TestPulling';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
@@ -34,7 +35,8 @@ export const allTestCases = [
   new TestOpportunitySquares(),
   new TestPackPosList(),
   new TestDynamicAvoidance(),
-  new TestShovingCostMatrix()
+  new TestShovingCostMatrix(),
+  new TestPortals()
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();

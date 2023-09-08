@@ -1,5 +1,5 @@
 import { CachingStrategy, cleanAllCaches } from './CachingStrategies';
-import { updateIntel } from './CostMatrixes/sourceKeepers';
+import { updateIntel } from './Utils/updateIntel';
 
 export type MoveTarget = { pos: RoomPosition; range: number };
 export interface MoveOpts extends PathFinderOpts {
