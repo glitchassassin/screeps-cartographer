@@ -1,4 +1,5 @@
 import { type MoveOpts, type MoveTarget } from 'lib';
+import { portalSets } from 'lib/WorldMap/portals';
 import { calculateNearbyPositions } from '../Movement/selectors';
 import { avoidSourceKeepers } from './sourceKeepers';
 
@@ -7,8 +8,9 @@ export interface CostMatrixOptions {
   avoidCreeps?: boolean;
   avoidObstacleStructures?: boolean;
   avoidSourceKeepers?: boolean;
+  ignorePortals?: boolean;
   roadCost?: number;
-  avoidTargets?: (roomName: string) => MoveTarget[]
+  avoidTargets?: (roomName: string) => MoveTarget[];
 }
 
 /**
@@ -51,9 +53,16 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
       calculateNearbyPositions(t.pos, t.range).forEach(p => cm.set(p.x, p.y, 254));
     });
   }
+
+  if (!opts.ignorePortals) {
+    const portalCoords = [...(portalSets.get(room)?.values() ?? [])].flatMap(p => {
+      if (room === p.room1) return [...p.portalMap.keys()];
+      return [...p.portalMap.reversed.keys()];
+    });
+    portalCoords.forEach(c => cm.set(c.x, c.y, 255));
+  }
   return cm;
 };
-
 
 export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string[]) => (room: string) => {
   if (targetRooms && !targetRooms.includes(room)) return false; // outside route search space
@@ -61,4 +70,4 @@ export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string
   if (cm === false) return cm;
   const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
   return mutateCostMatrix(cloned, room, actualOpts);
-}
+};

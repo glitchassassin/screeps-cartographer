@@ -1,5 +1,5 @@
 import { CachingStrategy, cleanAllCaches } from './CachingStrategies';
-import { updateIntel } from './CostMatrixes/sourceKeepers';
+import { updateIntel } from './Utils/updateIntel';
 
 export type MoveTarget = { pos: RoomPosition; range: number };
 export interface MoveOpts extends PathFinderOpts {
@@ -89,6 +89,17 @@ export interface MoveOpts extends PathFinderOpts {
    * if they intersect with creep's current path
    */
   avoidTargets?: (roomName: string) => MoveTarget[];
+  /**
+   * By default, portals will be blocked in the cost matrix if we aren't traveling through them
+   * to avoid ending up somewhere random. Set this to true to ignore portals in the cost matrix.
+   * This does not affect travel through portals.
+   */
+  ignorePortals?: boolean;
+  /**
+   * By default, portals are used for travel if they are the shortest path. Set this to true to
+   * avoid using portals for travel.
+   */
+  avoidPortals?: boolean;
 }
 
 export * from './CachingStrategies';

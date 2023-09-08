@@ -18,32 +18,75 @@ export function generatePath(origin: RoomPosition, targets: MoveTarget[], opts?:
     actualOpts = { ...actualOpts, ...defaultTerrainCosts(opts.creepMovementInfo) };
   }
 
-  // check if we need a route to limit search space
-  const exits = Object.values(Game.map.describeExits(origin.roomName));
-  let rooms: string[] | undefined = undefined;
-  if (!targets.some(({ pos }) => pos.roomName === origin.roomName)) {
-    // if there are multiple rooms in `targets`, pick the cheapest route
-    const targetRooms = targets.reduce(
-      (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
-      [] as string[]
-    );
-    for (const room of targetRooms) {
-      const route = findRoute(origin.roomName, room, actualOpts);
-      if (route && (!rooms || route.length < rooms.length)) {
-        rooms = route;
+  // generate a route to limit search space
+  const targetRooms = targets.reduce(
+    (rooms, { pos }) => (rooms.includes(pos.roomName) ? rooms : [pos.roomName, ...rooms]),
+    [] as string[]
+  );
+  let routes = findRoute(origin.roomName, targetRooms, actualOpts);
+
+  // generate path for each route segment
+  if (!routes?.length || routes.length === 1) {
+    const rooms = routes?.[0]?.rooms;
+    // No portals - just generate a single path
+    const result = PathFinder.search(origin, targets, {
+      ...actualOpts,
+      maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
+      roomCallback: configureRoomCallback(actualOpts, rooms)
+    });
+    if (!result.path.length || result.incomplete) return undefined;
+
+    return result.path;
+  } else {
+    // Generate paths to each portalSet and then merge into a single path
+    let workingOrigin = origin;
+    const path: RoomPosition[] = [];
+
+    for (const route of routes) {
+      if (!route.portalSet) {
+        // no portal set - this is the last segment of the path, go to the actual targets
+        const result = PathFinder.search(workingOrigin, targets, {
+          ...actualOpts,
+          maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
+          roomCallback: configureRoomCallback(actualOpts, route.rooms)
+        });
+        if (!result.path.length || result.incomplete) return undefined;
+        path.push(...result.path);
+      } else {
+        // portal set - pathfind to the closest portal in the portalset
+        const lastRoom = route.rooms.includes(route.portalSet.room1) ? route.portalSet.room1 : route.portalSet.room2;
+        const portalTargets = (
+          lastRoom === route.portalSet.room1
+            ? [...route.portalSet.portalMap.keys()]
+            : [...route.portalSet.portalMap.values()]
+        ).map(coord => ({ pos: new RoomPosition(coord.x, coord.y, lastRoom), range: 1 }));
+        const result = PathFinder.search(workingOrigin, portalTargets, {
+          ...actualOpts,
+          maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * route.rooms.length),
+          roomCallback: configureRoomCallback(actualOpts, route.rooms)
+        });
+        if (!result.path.length || result.incomplete) return undefined;
+        // paths to range 1 of portal - select a portal at the end of the path
+        const portal = portalTargets.find(t => t.pos.isNearTo(result.path[result.path.length - 1]))!.pos;
+        path.push(...result.path, portal);
+
+        // The next path begins at the destination of the target portal
+        if (route.portalSet.room1 === lastRoom) {
+          const destination = route.portalSet.portalMap.get(portal);
+          if (!destination)
+            throw new Error(`Portal ${portal} not found in portalSet ${JSON.stringify(route.portalSet)}`);
+          workingOrigin = new RoomPosition(destination.x, destination.y, route.portalSet.room2);
+        } else {
+          const destination = route.portalSet.portalMap.reversed.get(portal);
+          if (!destination)
+            throw new Error(`Portal ${portal} not found in portalSet ${JSON.stringify(route.portalSet)}`);
+          workingOrigin = new RoomPosition(destination.x, destination.y, route.portalSet.room1);
+        }
       }
     }
-    // console.log('generated path from', origin.roomName, 'to', targetRooms, ':', rooms);
-  }
-  // generate path
-  const result = PathFinder.search(origin, targets, {
-    ...actualOpts,
-    maxOps: Math.min(actualOpts.maxOps ?? 100000, (actualOpts.maxOpsPerRoom ?? 2000) * (rooms?.length ?? 1)),
-    roomCallback: configureRoomCallback(actualOpts, rooms)
-  });
-  if (!result.path.length || result.incomplete) return undefined;
 
-  return result.path;
+    return path;
+  }
 }
 
 function defaultTerrainCosts(

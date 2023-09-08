@@ -9,14 +9,12 @@ const keys = {
 
 const skKey = (room: string) => keys.SOURCE_KEEPER_POS_LIST + room;
 
-export function updateIntel() {
-  for (const room in Game.rooms) {
-    if (isSourceKeeperRoom(room) && !MemoryCache.get(skKey(room))) {
-      MemoryCache.with(PositionListSerializer).set(
-        skKey(room),
-        [...Game.rooms[room].find(FIND_SOURCES), ...Game.rooms[room].find(FIND_MINERALS)].map(s => s.pos)
-      );
-    }
+export function scanSourceKeepers(room: string) {
+  if (isSourceKeeperRoom(room) && !MemoryCache.get(skKey(room))) {
+    MemoryCache.with(PositionListSerializer).set(
+      skKey(room),
+      [...Game.rooms[room].find(FIND_SOURCES), ...Game.rooms[room].find(FIND_MINERALS)].map(s => s.pos)
+    );
   }
 }
 

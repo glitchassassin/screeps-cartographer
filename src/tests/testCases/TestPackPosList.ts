@@ -6,9 +6,11 @@ import {
   packCoordList,
   packPos,
   packPosList,
+  packRoomName,
   unpackCoordList,
   unpackPos,
-  unpackPosList
+  unpackPosList,
+  unpackRoomName
 } from 'utils/packPositions';
 import { generatePath } from '../../lib';
 import { TestResult } from '../tests';
@@ -55,6 +57,15 @@ export class TestPackPosList extends CartographerTestCase {
     if (!compressedDecompressedPath?.every((pos, i) => pos.isEqualTo(path[i]))) {
       console.log('[TestPackPosList] Inconsistent decompressPath results');
       return TestResult.FAIL;
+    }
+
+    const packedRoomName = packRoomName('W0N0');
+    const unpackedRoomName = unpackRoomName(packedRoomName);
+    if (unpackedRoomName !== 'W0N0') {
+      console.log('[TestPackPosList] Inconsistent packRoomName results');
+      return TestResult.FAIL;
+    } else {
+      console.log('[TestPackPosList] packRoomName results:', packedRoomName);
     }
 
     const testGlobalPositions = [
