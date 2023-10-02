@@ -153,7 +153,7 @@ function deserializePortalSet(serialized: string): PortalSet {
 
 export function describeExitsWithPortals(room: string): string[] {
   // initial set with normal room exits
-  const exits = new Set(Object.values(Game.map.describeExits(room)));
+  const exits = new Set(Object.values(Game.map.describeExits(room) ?? {}));
 
   // add portals to set
   const portalSetMap = portalSets.get(room);
