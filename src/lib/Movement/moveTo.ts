@@ -97,24 +97,6 @@ export const moveTo = (
 
   if (DEBUG) logCpu('normalizing targets');
 
-  // if relevant opts have changed, clear cached path
-  const cachedOpts = cache.with(JsonSerializer).get(creepKey(creep, keys.CACHED_PATH_OPTS));
-  if (!cachedOpts || optCacheFields.some(f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f])) {
-    clearCachedPath(creep, cache);
-  }
-
-  // Skip if power creep or any costs has been manually set.
-  if (DEBUG) logCpu('adding creep info for calculate default road, plain and swamp costs');
-  const manuallyDefinedCosts = [opts?.roadCost, opts?.plainCost, opts?.swampCost].some(cost => cost !== undefined);
-  if ('body' in creep && !manuallyDefinedCosts) {
-    actualOpts = {
-      ...actualOpts,
-      creepMovementInfo: { usedCapacity: creep.store.getUsedCapacity(), body: creep.body }
-    };
-  }
-
-  if (DEBUG) logCpu('checking opts');
-
   let needToFlee = false;
   let cachedTargets = cache.with(MoveTargetListSerializer).get(creepKey(creep, keys.CACHED_PATH_TARGETS));
   for (const { pos, range } of normalizedTargets) {
@@ -149,6 +131,24 @@ export const moveTo = (
   }
 
   if (DEBUG) logCpu('checking targets');
+
+  // if relevant opts have changed, clear cached path
+  const cachedOpts = cache.with(JsonSerializer).get(creepKey(creep, keys.CACHED_PATH_OPTS));
+  if (!cachedOpts || optCacheFields.some(f => actualOpts[f as keyof MoveOpts] !== cachedOpts[f])) {
+    clearCachedPath(creep, cache);
+  }
+
+  // Skip if power creep or any costs has been manually set.
+  if (DEBUG) logCpu('adding creep info for calculate default road, plain and swamp costs');
+  const manuallyDefinedCosts = [opts?.roadCost, opts?.plainCost, opts?.swampCost].some(cost => cost !== undefined);
+  if ('body' in creep && !manuallyDefinedCosts) {
+    actualOpts = {
+      ...actualOpts,
+      creepMovementInfo: { usedCapacity: creep.store.getUsedCapacity(), body: creep.body }
+    };
+  }
+
+  if (DEBUG) logCpu('checking opts');
 
   // cache opts
   const expiration = actualOpts.reusePath ? Game.time + actualOpts.reusePath + 1 : undefined;
