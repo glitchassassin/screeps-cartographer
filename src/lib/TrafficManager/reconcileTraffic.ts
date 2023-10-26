@@ -81,7 +81,6 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
     });
 
     if (opts?.visualize) {
-      console.log(creep, creep.pos, Game.rooms[creep.pos.roomName]);
       Game.rooms[creep.pos.roomName].visual.circle(creep.pos, { radius: 1, stroke: 'red', fill: 'transparent ' });
     }
   }
