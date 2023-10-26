@@ -143,11 +143,8 @@ export const calculateNearbyPositions = (pos: RoomPosition, proximity: number, i
   let adjacent: RoomPosition[] = [];
   adjacent = calculateAdjacencyMatrix(proximity)
     .map(offset => {
-      try {
-        return offsetRoomPosition(pos, offset.x, offset.y);
-      } catch {
-        return null;
-      }
+      if (pos.x + offset.x < 0 || pos.x + offset.x > 49 || pos.y + offset.y < 0 || pos.y + offset.y > 49) return null;
+      return offsetRoomPosition(pos, offset.x, offset.y);
     })
     .filter(roomPos => roomPos !== null) as RoomPosition[];
   if (includeCenter) adjacent.push(pos);
