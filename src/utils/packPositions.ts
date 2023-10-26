@@ -32,7 +32,7 @@ export const packPos = (pos: RoomPosition) => {
 /**
  * Unpack a single packed RoomPosition from two Unicode characters
  */
-export const unpackPos = function (str: string) {
+export const unpackPos = function (str: string): RoomPosition {
   // decode the room position
   const packedPos = roomPositionCodec.decode(str);
   // adjust the packedPos
