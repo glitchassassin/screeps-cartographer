@@ -2,6 +2,7 @@ import { RoomPositionSet } from 'lib/Utils/RoomPositionSet';
 import { memoize } from 'lib/Utils/memoize';
 import { Coord, fromGlobalPosition, globalPosition } from 'utils/packPositions';
 import { MoveTarget } from '..';
+import { offsetRoomPosition, sameRoomPosition } from './roomPositions';
 
 /**
  * Position is an edge tile
@@ -112,7 +113,7 @@ function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
       if (!set.some(c => c.x === coord.x && c.y === coord.y)) set.push(coord);
       return set;
     }, [] as Coord[])
-    .map(coord => ({ pos: new RoomPosition(coord.x, coord.y, pos.roomName), range: quadrantRange }));
+    .map(coord => ({ pos: sameRoomPosition(pos, coord.x, coord.y), range: quadrantRange }));
 
   return quadrants;
 }
@@ -143,7 +144,7 @@ export const calculateNearbyPositions = (pos: RoomPosition, proximity: number, i
   adjacent = calculateAdjacencyMatrix(proximity)
     .map(offset => {
       try {
-        return new RoomPosition(pos.x + offset.x, pos.y + offset.y, pos.roomName);
+        return offsetRoomPosition(pos, offset.x, offset.y);
       } catch {
         return null;
       }

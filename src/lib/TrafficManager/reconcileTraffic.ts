@@ -69,8 +69,9 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
   }
 
   // Set move intents for shove targets
-  for (const creep of (Game.rooms[room].find(FIND_MY_CREEPS) as (Creep | PowerCreep)[])
-    .concat(Game.rooms[room].find(FIND_MY_POWER_CREEPS))) {
+  for (const creep of (Game.rooms[room].find(FIND_MY_CREEPS) as (Creep | PowerCreep)[]).concat(
+    Game.rooms[room].find(FIND_MY_POWER_CREEPS)
+  )) {
     if (moveIntents.creep.has(creep) || moveIntents.pullees.has(creep) || moveIntents.pullers.has(creep)) continue;
 
     registerMove({
@@ -79,8 +80,10 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
       targets: [creep.pos, ...adjacentWalkablePositions(creep.pos, true)]
     });
 
-    if (opts?.visualize)
+    if (opts?.visualize) {
+      console.log(creep, creep.pos, Game.rooms[creep.pos.roomName]);
       Game.rooms[creep.pos.roomName].visual.circle(creep.pos, { radius: 1, stroke: 'red', fill: 'transparent ' });
+    }
   }
 
   // remove pullers as move targets

@@ -1,3 +1,4 @@
+import { fastRoomPosition, sameRoomPosition } from 'lib/Movement/roomPositions';
 import { Codec } from 'screeps-utf15';
 
 declare global {
@@ -39,7 +40,7 @@ export const unpackPos = function (str: string) {
   const yy = packedPos & 0x3f;
   const newPackedPos = ((packedPos << 4) & 0xffff0000) | (xx << 8) | yy;
   // return a new RoomPosition object
-  const pos = new RoomPosition(0, 0, 'E0S0');
+  const pos = Object.create(RoomPosition.prototype);
   pos.__packedPos = newPackedPos;
   if (pos.x > 49 || pos.y > 49) {
     throw new Error('Invalid room position');
@@ -132,7 +133,7 @@ export const fromGlobalPosition = (pos: { x: number; y: number }) => {
   if (wx < 0 && x < 0) x = 49 - ~x;
   if (wy < 0 && y < 0) y = 49 - ~y;
   let roomName = roomNameFromCoords(wx, wy);
-  return new RoomPosition(x, y, roomName);
+  return fastRoomPosition(x, y, roomName);
 };
 
 export const getRangeTo = (from: RoomPosition, to: RoomPosition) => {
@@ -182,7 +183,10 @@ export function posAtDirection(origin: RoomPosition, direction: DirectionConstan
     newY = 0;
   }
 
-  return new RoomPosition(newX, newY, newRoomName);
+  if (newRoomName === origin.roomName) {
+    return sameRoomPosition(origin, newX, newY);
+  }
+  return fastRoomPosition(newX, newY, newRoomName);
 }
 
 /**

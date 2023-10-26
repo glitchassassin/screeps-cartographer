@@ -13,6 +13,7 @@ import { TestPortals } from './TestPortals';
 import { TestPriority } from './TestPriority';
 import { TestPulling } from './TestPulling';
 import { TestRoomEdgeRange } from './TestRoomEdgeRange';
+import { TestRoomPositionPerformance } from './TestRoomPositionPerformance';
 import { TestShove } from './TestShove';
 import { TestShovingCostMatrix } from './TestShovingCostMatrix';
 import { TestStuck } from './TestStuck';
@@ -36,7 +37,8 @@ export const allTestCases = [
   new TestPackPosList(),
   new TestDynamicAvoidance(),
   new TestShovingCostMatrix(),
-  new TestPortals()
+  new TestPortals(),
+  new TestRoomPositionPerformance()
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();
