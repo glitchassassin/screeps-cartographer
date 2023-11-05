@@ -49,9 +49,10 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
     });
   }
   if (opts.avoidTargets) {
-    opts.avoidTargets(room).forEach(t => {
-      calculateNearbyPositions(t.pos, t.range).forEach(p => cm.set(p.x, p.y, 254));
-    });
+    const terrain = Game.map.getRoomTerrain(room);
+    for (const t of opts.avoidTargets(room))
+      for (const p of calculateNearbyPositions(t.pos, t.range))
+        if (terrain.get(p.x, p.y) !== TERRAIN_MASK_WALL) cm.set(p.x, p.y, Math.max(cm.get(p.x, p.y), 254));
   }
 
   if (!opts.ignorePortals) {
