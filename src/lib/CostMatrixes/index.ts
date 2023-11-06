@@ -11,6 +11,7 @@ export interface CostMatrixOptions {
   ignorePortals?: boolean;
   roadCost?: number;
   avoidTargets?: (roomName: string) => MoveTarget[];
+  avoidTargetGradient?: number;
 }
 
 /**
@@ -52,7 +53,10 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
     const terrain = Game.map.getRoomTerrain(room);
     for (const t of opts.avoidTargets(room))
       for (const p of calculateNearbyPositions(t.pos, t.range, true))
-        if (terrain.get(p.x, p.y) !== TERRAIN_MASK_WALL) cm.set(p.x, p.y, Math.max(cm.get(p.x, p.y), 254));
+        if (terrain.get(p.x, p.y) !== TERRAIN_MASK_WALL) {
+          const avoidWeight = 254 - p.getRangeTo(t.pos) * (opts.avoidTargetGradient ?? 0);
+          cm.set(p.x, p.y, Math.max(cm.get(p.x, p.y), avoidWeight));
+        }
   }
 
   if (!opts.ignorePortals) {

@@ -90,6 +90,12 @@ export interface MoveOpts extends PathFinderOpts {
    */
   avoidTargets?: (roomName: string) => MoveTarget[];
   /**
+   * Gradient for avoid targets - by default, tiles within an avoidTarget will be
+   * set to 254, but if a gradient is set, the cost will decrease by (gradient * range)
+   * for each tile away from the target.
+   */
+  avoidTargetGradient?: number;
+  /**
    * By default, portals will be blocked in the cost matrix if we aren't traveling through them
    * to avoid ending up somewhere random. Set this to true to ignore portals in the cost matrix.
    * This does not affect travel through portals.
