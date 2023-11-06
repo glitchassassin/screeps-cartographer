@@ -51,7 +51,7 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
   if (opts.avoidTargets) {
     const terrain = Game.map.getRoomTerrain(room);
     for (const t of opts.avoidTargets(room))
-      for (const p of calculateNearbyPositions(t.pos, t.range))
+      for (const p of calculateNearbyPositions(t.pos, t.range, true))
         if (terrain.get(p.x, p.y) !== TERRAIN_MASK_WALL) cm.set(p.x, p.y, Math.max(cm.get(p.x, p.y), 254));
   }
 
