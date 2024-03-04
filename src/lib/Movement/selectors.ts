@@ -103,19 +103,30 @@ function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
     y2: Math.min(48, pos.y + range)
   };
   const quadrantRange = Math.ceil((Math.min(rect.x2 - rect.x1, rect.y2 - rect.y1) - 1) / 2);
-  const quadrants = [
+  let quadrants = [
     { x: rect.x1 + quadrantRange, y: rect.y1 + quadrantRange },
     { x: rect.x1 + quadrantRange, y: rect.y2 - quadrantRange },
     { x: rect.x2 - quadrantRange, y: rect.y2 - quadrantRange },
     { x: rect.x2 - quadrantRange, y: rect.y1 + quadrantRange }
   ]
+  if (range === 1) {
+    if (rect.x1 === 1) {
+      quadrants.push({ x: pos.x + range, y: pos.y })
+    } else if (rect.x2 === 48) {
+      quadrants.push({ x: pos.x - range, y: pos.y })
+    } else if (rect.y1 === 1) {
+      quadrants.push({ x: pos.x, y: pos.y + range })
+    } else if (rect.y2 === 48) {
+      quadrants.push({ x: pos.x, y: pos.y - range })
+    }
+  }
+
+  return quadrants
     .reduce((set, coord) => {
       if (!set.some(c => c.x === coord.x && c.y === coord.y)) set.push(coord);
       return set;
     }, [] as Coord[])
-    .map(coord => ({ pos: sameRoomPosition(pos, coord.x, coord.y), range: quadrantRange }));
-
-  return quadrants;
+    .map(coord => ({ pos: sameRoomPosition(pos, coord.x, coord.y), range: quadrantRange }));;
 }
 
 /**
