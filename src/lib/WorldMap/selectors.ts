@@ -1,9 +1,15 @@
 export const isHighway = (roomName: string) => {
+  if (roomName === 'sim') {
+    return false;
+  }
   let parsed = roomName.match(/^[WE]([0-9]+)[NS]([0-9]+)$/);
   if (!parsed) throw new Error('Invalid room name');
   return Number(parsed[1]) % 10 === 0 || Number(parsed[2]) % 10 === 0;
 };
 export const isCenterRoom = (roomName: string) => {
+  if (roomName === 'sim') {
+    return false;
+  }
   let parsed = roomName.match(/^[WE]([0-9]+)[NS]([0-9]+)$/);
   if (!parsed) throw new Error('Invalid room name');
   return Number(parsed[1]) % 10 === 5 && Number(parsed[2]) % 10 === 5;
