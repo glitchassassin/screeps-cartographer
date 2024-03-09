@@ -9,6 +9,9 @@ export const isCenterRoom = (roomName: string) => {
   return Number(parsed[1]) % 10 === 5 && Number(parsed[2]) % 10 === 5;
 };
 export const isSourceKeeperRoom = (roomName: string) => {
+  if (roomName === 'sim') {
+    return false;
+  }
   let parsed = roomName.match(/^[WE]([0-9]+)[NS]([0-9]+)$/);
   if (!parsed) throw new Error('Invalid room name');
   let fmod = Number(parsed[1]) % 10;
