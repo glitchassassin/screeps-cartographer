@@ -1,6 +1,6 @@
 import { RoomPositionSet } from 'lib/Utils/RoomPositionSet';
 import { memoize } from 'lib/Utils/memoize';
-import { Coord, fromGlobalPosition, globalPosition } from 'utils/packPositions';
+import { fromGlobalPosition, globalPosition } from 'utils/packPositions';
 import { MoveTarget } from '..';
 import { offsetRoomPosition, sameRoomPosition } from './roomPositions';
 
@@ -91,8 +91,8 @@ export const normalizeTargets = memoize(
  * overlapping the edge. Useful for pathing in range of a target, but making sure it's
  * at least in the same room.
  */
-function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
-  if (pos.x > range && 49 - pos.x > range && pos.y > range && 49 - pos.y > range) {
+export function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
+  if (range === 0 || (pos.x > range && 49 - pos.x > range && pos.y > range && 49 - pos.y > range)) {
     return [{ pos, range }]; // no action needed
   }
   // generate quadrants
@@ -102,20 +102,38 @@ function fixEdgePosition({ pos, range }: MoveTarget): MoveTarget[] {
     y1: Math.max(1, pos.y - range),
     y2: Math.min(48, pos.y + range)
   };
-  const quadrantRange = Math.ceil((Math.min(rect.x2 - rect.x1, rect.y2 - rect.y1) - 1) / 2);
-  const quadrants = [
-    { x: rect.x1 + quadrantRange, y: rect.y1 + quadrantRange },
-    { x: rect.x1 + quadrantRange, y: rect.y2 - quadrantRange },
-    { x: rect.x2 - quadrantRange, y: rect.y2 - quadrantRange },
-    { x: rect.x2 - quadrantRange, y: rect.y1 + quadrantRange }
-  ]
-    .reduce((set, coord) => {
-      if (!set.some(c => c.x === coord.x && c.y === coord.y)) set.push(coord);
-      return set;
-    }, [] as Coord[])
-    .map(coord => ({ pos: sameRoomPosition(pos, coord.x, coord.y), range: quadrantRange }));
+  const xdiff = rect.x2 - rect.x1 + 1; // width of the rect (inclusive)
+  const ydiff = rect.y2 - rect.y1 + 1; // height of the rect (inclusive)
 
-  return quadrants;
+  // each square will have a center pos and a range that yields bounds
+  // as close as possible to the min dimension of the rect
+  const subsetRange = Math.floor((Math.min(xdiff, ydiff) - 1) / 2);
+
+  // lay out a grid of squares that fills the rect as efficiently as possible
+  // the last square in the row and/or column, if it doesn't fill the space
+  // completely, will be shifted back to avoid overlapping the edge of the rect
+  const xIndexes = Math.floor(xdiff / (subsetRange + 1));
+  const yIndexes = Math.floor(ydiff / (subsetRange + 1));
+
+  const xCoords = new Set(
+    Array(xIndexes)
+      .fill(0)
+      .map((_, i) => Math.min(rect.x2 - subsetRange, rect.x1 + subsetRange + i * (subsetRange * 2 + 1)))
+  );
+  const yCoords = new Set(
+    Array(yIndexes)
+      .fill(0)
+      .map((_, i) => Math.min(rect.y2 - subsetRange, rect.y1 + subsetRange + i * (subsetRange * 2 + 1)))
+  );
+
+  const squares = [];
+  for (const x of xCoords) {
+    for (const y of yCoords) {
+      squares.push({ pos: sameRoomPosition(pos, x, y), range: subsetRange });
+    }
+  }
+
+  return squares;
 }
 
 /**

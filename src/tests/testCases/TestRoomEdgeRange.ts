@@ -1,4 +1,4 @@
-import { isExit, moveTo } from '../../lib';
+import { fixEdgePosition, isExit, moveTo } from '../../lib';
 import { TestResult } from '../tests';
 import { CartographerTestCase } from './CartographerTestCase';
 
@@ -32,6 +32,11 @@ export class TestRoomEdgeRange extends CartographerTestCase {
         throw new Error('exit square not on edge');
       }
     }
+
+    if (!fixEdgePosition({ pos: this.targetPos, range: 1}).some(({ pos, range }) => pos.inRangeTo(this.targetPos!, range))) {
+      throw new Error('Target square not included in edge breakdown')
+    }
+    
     if (
       this.creeps.c1.pos.inRangeTo(this.targetPos, 5) &&
       !isExit(this.creeps.c1.pos) &&
