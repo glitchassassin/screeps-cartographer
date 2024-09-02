@@ -251,7 +251,7 @@ export function findRouteWithPortals(
 
     for (const next of describeExitsWithPortals(current)) {
       const cost = costSoFar.get(current)! + routeCallback(current, next);
-      if (!costSoFar.has(next) || cost < costSoFar.get(next)!) {
+      if (cost !== Infinity && (!costSoFar.has(next) || cost < costSoFar.get(next)!)) {
         costSoFar.set(next, cost);
         const priority = cost + Math.min(...toRooms.map(toRoom => findRouteHeuristic(next, toRoom)));
         frontier.put(next, priority);

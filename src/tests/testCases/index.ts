@@ -6,6 +6,7 @@ import { TestCachedPaths } from './TestCachedPaths';
 import { TestCPU } from './TestCPU';
 import { TestDeadlock } from './TestDeadlock';
 import { TestDynamicAvoidance } from './TestDynamicAvoidance';
+import { TestFindRoute } from './TestFindRoute';
 import { TestFlee } from './TestFlee';
 import { TestOpportunitySquares } from './TestOpportunitySquares';
 import { TestPackPosList } from './TestPackPosList';
@@ -38,7 +39,8 @@ export const allTestCases = [
   new TestDynamicAvoidance(),
   new TestShovingCostMatrix(),
   new TestPortals(),
-  new TestRoomPositionPerformance()
+  new TestRoomPositionPerformance(),
+  new TestFindRoute()
 ];
 export const testCases = allTestCases.slice();
 const testResults = new Map<CartographerTestCase, TestResult>();
