@@ -1,9 +1,9 @@
-import { MemoryCache } from '../CachingStrategies/Memory';
-import { NumberSerializer } from '../CachingStrategies/Serializers/Number';
-import { adjacentWalkablePositions } from '../Movement/selectors';
 // import { logCpu, logCpuStart } from '../../utils/logCpu';
 import { packPos } from '../../utils/packPositions';
 import { measure } from '../../utils/profiler';
+import { MemoryCache } from '../CachingStrategies/Memory';
+import { NumberSerializer } from '../CachingStrategies/Serializers/Number';
+import { adjacentWalkablePositions } from '../Movement/selectors';
 import { getMoveIntentRooms, getMoveIntents, registerMove, updateIntentTargetCount } from './moveLedger';
 
 const keys = {
@@ -72,7 +72,8 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
   for (const creep of (Game.rooms[room].find(FIND_MY_CREEPS) as (Creep | PowerCreep)[]).concat(
     Game.rooms[room].find(FIND_MY_POWER_CREEPS)
   )) {
-    if (moveIntents.creep.has(creep) || moveIntents.pullees.has(creep) || moveIntents.pullers.has(creep)) continue;
+    if (moveIntents.creep.has(creep.id) || moveIntents.pullees.has(creep.id) || moveIntents.pullers.has(creep.id))
+      continue;
 
     registerMove({
       creep,
@@ -87,10 +88,12 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
 
   // remove pullers as move targets
   for (const puller of moveIntents.pullers) {
-    const posKey = packPos(puller.pos);
+    const creep = Game.getObjectById(puller);
+    if (!creep) continue;
+    const posKey = packPos(creep.pos);
     used.add(posKey);
     for (const intent of moveIntents.targets.get(posKey)?.values() ?? []) {
-      if (intent.creep === puller) continue;
+      if (intent.creep.id === puller) continue;
 
       intent.targetCount ??= intent.targets.length;
       const oldCount = intent.targetCount;
@@ -119,7 +122,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         if (intent.resolved) {
           // a swapping creep will sometimes end up on the stack twice.
           // if its move has already been resolved, ignore it
-          intents.delete(intent.creep);
+          intents.delete(intent.creep.id);
           continue;
         }
         // for (const intent of [...intents.values()]) {
@@ -144,7 +147,8 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         let targetPos: RoomPosition | undefined = undefined;
         for (const target of intent.targets) {
           const p = packPos(target);
-          if (used.has(p) && !(intent.creep.pos.isEqualTo(target) && moveIntents.pullers.has(intent.creep))) continue; // a creep is already moving here
+          if (used.has(p) && !(intent.creep.pos.isEqualTo(target) && moveIntents.pullers.has(intent.creep.id)))
+            continue; // a creep is already moving here
           if (intent.creep.pos.isEqualTo(target) || !moveIntents.prefersToStay.has(p)) {
             // best case - no other creep prefers to stay here
             targetPos = target;
@@ -154,7 +158,7 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
         }
 
         // handling intent, remove from queue
-        intents.delete(intent.creep);
+        intents.delete(intent.creep.id);
         // logCpu('handling intent');
 
         if (!targetPos) {
@@ -207,13 +211,13 @@ function reconcileTrafficByRoom(room: string, opts?: ReconcileTrafficOpts) {
 
         // if a creep in the destination position is moving to this position, override
         // any other intents moving to this position
-        if (!targetPos.isEqualTo(intent.creep.pos) && !moveIntents.pullers.has(intent.creep)) {
+        if (!targetPos.isEqualTo(intent.creep.pos) && !moveIntents.pullers.has(intent.creep.id)) {
           const swapPos = packPos(intent.creep.pos);
           const movingHereIntents = [...(moveIntents.targets.get(swapPos)?.values() ?? [])].filter(
             i => i !== intent && i.targets.length < 2
           );
           const swapCreep = movingHereIntents.find(
-            i => !i.resolved && targetPos?.isEqualTo(i.creep.pos) && !moveIntents.pullers.has(i.creep)
+            i => !i.resolved && targetPos?.isEqualTo(i.creep.pos) && !moveIntents.pullers.has(i.creep.id)
           );
 
           if (swapCreep) {

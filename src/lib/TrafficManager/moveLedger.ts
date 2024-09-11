@@ -9,11 +9,11 @@ interface MoveIntent {
 }
 
 const generateIndexes = () => ({
-  creep: new Map<Creep | PowerCreep, MoveIntent>(),
-  priority: new Map<number, Map<number, Map<Creep | PowerCreep, MoveIntent>>>(),
-  targets: new Map<string, Map<Creep | PowerCreep, MoveIntent>>(),
-  pullers: new Set<Creep | PowerCreep>(),
-  pullees: new Set<Creep | PowerCreep>(),
+  creep: new Map<Id<Creep | PowerCreep>, MoveIntent>(),
+  priority: new Map<number, Map<number, Map<Id<Creep | PowerCreep>, MoveIntent>>>(),
+  targets: new Map<string, Map<Id<Creep | PowerCreep>, MoveIntent>>(),
+  pullers: new Set<Id<Creep | PowerCreep>>(),
+  pullees: new Set<Id<Creep | PowerCreep>>(),
   prefersToStay: new Set<string>(),
   blockedSquares: new Set<string>()
 });
@@ -52,8 +52,8 @@ export function getMoveIntentRooms() {
  */
 export function registerPull(puller: Creep, pullee: Creep) {
   const intents = getMoveIntents(puller.pos.roomName);
-  intents.pullers.add(puller);
-  intents.pullees.add(pullee);
+  intents.pullers.add(puller.id);
+  intents.pullees.add(pullee.id);
 }
 
 /**
@@ -66,19 +66,19 @@ export function registerMove(intent: MoveIntent, pulled = false) {
   intent.targetCount ??= intent.targets.length;
   const indexes = getMoveIntents(intent.creep.pos.roomName);
   // cancel old intent, if needed
-  cancelMove(indexes.creep.get(intent.creep));
+  cancelMove(indexes.creep.get(intent.creep.id));
   // register new one
-  indexes.creep.set(intent.creep, intent);
-  const byPriority = indexes.priority.get(intent.priority) ?? new Map();
+  indexes.creep.set(intent.creep.id, intent);
+  const byPriority = indexes.priority.get(intent.priority) ?? new Map<number, Map<Id<Creep | PowerCreep>, MoveIntent>>();
   indexes.priority.set(intent.priority, byPriority);
-  const byTargetCount = byPriority.get(intent.targets.length) ?? new Map();
+  const byTargetCount = byPriority.get(intent.targets.length) ?? new Map<Id<Creep | PowerCreep>, MoveIntent>();
   byPriority.set(intent.targets.length, byTargetCount);
-  byTargetCount.set(intent.creep, intent);
+  byTargetCount.set(intent.creep.id, intent);
   for (const target of intent.targets) {
     const key = packPos(target);
-    const targets = indexes.targets.get(key) ?? new Map();
+    const targets = indexes.targets.get(key) ?? new Map<Id<Creep | PowerCreep>, MoveIntent>();
     indexes.targets.set(key, targets);
-    targets.set(intent.creep, intent);
+    targets.set(intent.creep.id, intent);
   }
   if (intent.targets.length && intent.targets[0].isEqualTo(intent.creep.pos)) {
     indexes.prefersToStay.add(packPos(intent.creep.pos));
@@ -92,11 +92,11 @@ export function cancelMove(intent?: MoveIntent) {
   if (!intent) return;
   intent.targetCount ??= intent.targets.length;
   const indexes = getMoveIntents(intent.creep.pos.roomName);
-  indexes.creep.delete(intent.creep);
-  indexes.priority.get(intent.priority)?.get(intent.targets.length)?.delete(intent.creep);
+  indexes.creep.delete(intent.creep.id);
+  indexes.priority.get(intent.priority)?.get(intent.targets.length)?.delete(intent.creep.id);
   for (const target of intent.targets) {
     const key = packPos(target);
-    indexes.targets.get(key)?.delete(intent.creep);
+    indexes.targets.get(key)?.delete(intent.creep.id);
   }
 }
 
@@ -105,12 +105,13 @@ export function cancelMove(intent?: MoveIntent) {
  */
 export function updateIntentTargetCount(intent: MoveIntent, oldCount: number, newCount: number) {
   const indexes = getMoveIntents(intent.creep.pos.roomName);
-  const byPriority = indexes.priority.get(intent.priority) ?? new Map<number, Map<Creep | PowerCreep, MoveIntent>>();
-  byPriority.get(oldCount)?.delete(intent.creep);
+  const byPriority =
+    indexes.priority.get(intent.priority) ?? new Map<number, Map<Id<Creep | PowerCreep>, MoveIntent>>();
+  byPriority.get(oldCount)?.delete(intent.creep.id);
   indexes.priority.set(intent.priority, byPriority);
-  const byTargetCount = byPriority.get(newCount) ?? new Map<Creep | PowerCreep, MoveIntent>();
+  const byTargetCount = byPriority.get(newCount) ?? new Map<Id<Creep | PowerCreep>, MoveIntent>();
   byPriority.set(newCount, byTargetCount);
-  byTargetCount.set(intent.creep, intent);
+  byTargetCount.set(intent.creep.id, intent);
 }
 
 /**
