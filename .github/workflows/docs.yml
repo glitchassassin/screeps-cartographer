@@ -50,7 +50,7 @@ jobs:
       - name: Build docs
         run: npm run build:docs
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1 # This will automatically upload an artifact from the '/_site' directory
+        uses: actions/upload-pages-artifact@v3 # This will automatically upload an artifact from the '/_site' directory
         with:
           path: ./docs
 
