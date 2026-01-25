@@ -143,8 +143,8 @@ export const moveTo = (
   const manuallyDefinedCosts = [opts?.roadCost, opts?.plainCost, opts?.swampCost].some(cost => cost !== undefined);
   if ('body' in creep && !manuallyDefinedCosts) {
     actualOpts = {
-      ...actualOpts,
-      creepMovementInfo: { usedCapacity: creep.store.getUsedCapacity(), body: creep.body }
+      creepMovementInfo: { usedCapacity: creep.store.getUsedCapacity(), body: creep.body },
+      ...actualOpts
     };
   }
 
