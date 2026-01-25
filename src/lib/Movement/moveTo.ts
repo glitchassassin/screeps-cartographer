@@ -141,10 +141,10 @@ export const moveTo = (
   // Skip if power creep or any costs has been manually set.
   if (DEBUG) logCpu('adding creep info for calculate default road, plain and swamp costs');
   const manuallyDefinedCosts = [opts?.roadCost, opts?.plainCost, opts?.swampCost].some(cost => cost !== undefined);
-  if ('body' in creep && !manuallyDefinedCosts && !actualOpts.creepMovementInfo) {
+  if ('body' in creep && !manuallyDefinedCosts) {
     actualOpts = {
-      ...actualOpts,
-      creepMovementInfo: { usedCapacity: creep.store.getUsedCapacity(), body: creep.body }
+      creepMovementInfo: { usedCapacity: creep.store.getUsedCapacity(), body: creep.body },
+      ...actualOpts
     };
   }
 
