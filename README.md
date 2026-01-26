@@ -226,3 +226,4 @@ To run the tests, simply run the build and copy the contents of `dist/test.js` t
 - [rougeayrn](https://github.com/rougeayrn)
 - [Javrd](https://github.com/Javrd)
 - [Alexey007gold](https://github.com/Alexey007gold)
+- [Daxten](https://github.com/Daxten)
