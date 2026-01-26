@@ -33,9 +33,9 @@ jobs:
         run: npm install
       - name: Build package
         run: npm run build
-      - name: Publish package
-        uses: JS-DevTools/npm-publish@v4
-
+      - name: Publish to npm
+        run: |
+          npm view screeps-cartographer@$(node -p "require('./package.json').version") version 2>/dev/null && echo "Version already published, skipping" || npm publish
   build-docs:
     runs-on: ubuntu-latest
     steps:
