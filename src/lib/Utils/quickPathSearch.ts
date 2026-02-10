@@ -19,7 +19,10 @@ export function quickPathSearch(search: RoomPosition, path: RoomPosition[], reve
     if (currentRoomPacked === searchRoom) {
       const dist = currentPos.getRangeTo(search);
       if (dist > 1) {
-        i += dist - 1; // -1 because the loop increments i
+        if (reverse)
+          i += -dist + 1; // +1 because the loop decreases i
+        else
+          i += dist - 1; // -1 because the loop increments i
       }
     }
   }
