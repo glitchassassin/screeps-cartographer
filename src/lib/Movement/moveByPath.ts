@@ -26,7 +26,7 @@ export function moveByPath(creep: Creep | PowerCreep, key: string, opts?: MoveBy
 
   // check if creep has made it back to the path
   if ((repath || avoidTargets.length) && rerouteIndex !== undefined) {
-    let currentIndex = cachedPath ? quickPathSearch(creep.pos, cachedPath) : undefined;
+    let currentIndex = cachedPath ? quickPathSearch(creep.pos, cachedPath, opts?.reverse || false) : undefined;
     if (currentIndex === -1) currentIndex = undefined;
     if (currentIndex !== undefined && (opts?.reverse ? currentIndex <= rerouteIndex : currentIndex >= rerouteIndex)) {
       // creep is no longer stuck

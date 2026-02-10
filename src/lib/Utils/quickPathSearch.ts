@@ -1,9 +1,11 @@
 // using the packed representation to improve cpu usage, also uses skip-list logic on the path
-export function quickPathSearch(search: RoomPosition, path: RoomPosition[]): number {
+export function quickPathSearch(search: RoomPosition, path: RoomPosition[], reverse: boolean = false): number {
   const searchPacked = search.__packedPos;
   const searchRoom = searchPacked >>> 16;
 
-  for (let i = 0; i < path.length; i++) {
+  const startIdx = reverse ? path.length - 1 : 0;
+
+  for (let i = startIdx; reverse ? i > -1 : i < path.length; reverse ? i-- : i++) {
     const currentPos = path[i];
 
     if (currentPos.isEqualTo(search)) {
