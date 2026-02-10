@@ -83,7 +83,6 @@ export const maybeMutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMa
 export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string[]) => (room: string) => {
   if (targetRooms && !targetRooms.includes(room)) return false; // outside route search space
   let cm = actualOpts.roomCallback?.(room);
-  if (cm === false) return cm;
-  const normalizedMatrix = cm instanceof PathFinder.CostMatrix ? cm : new PathFinder.CostMatrix();
-  return maybeMutateCostMatrix(normalizedMatrix, room, actualOpts);
+  if (cm === false || cm === true) return cm;
+  return maybeMutateCostMatrix(cm || new PathFinder.CostMatrix(), room, actualOpts);
 };
