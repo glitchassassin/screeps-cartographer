@@ -84,6 +84,6 @@ export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string
   if (targetRooms && !targetRooms.includes(room)) return false; // outside route search space
   let cm = actualOpts.roomCallback?.(room);
   if (cm === false) return cm;
-  const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
-  return maybeMutateCostMatrix(cloned, room, actualOpts);
+  const normalizedMatrix = cm instanceof PathFinder.CostMatrix ? cm : new PathFinder.CostMatrix();
+  return maybeMutateCostMatrix(normalizedMatrix, room, actualOpts);
 };
