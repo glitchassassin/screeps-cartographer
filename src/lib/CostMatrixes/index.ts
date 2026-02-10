@@ -4,6 +4,7 @@ import { calculateNearbyPositions } from '../Movement/selectors';
 import { avoidSourceKeepers } from './sourceKeepers';
 
 export type CostMatrixMutator = (cm: CostMatrix, room: string) => CostMatrix;
+
 export interface CostMatrixOptions {
   avoidCreeps?: boolean;
   avoidObstacleStructures?: boolean;
@@ -15,22 +16,23 @@ export interface CostMatrixOptions {
 }
 
 /**
- * Mutates a cost matrix based on a set of options, and returns the mutated cost matrix.
+ * Maybe mutates a cost matrix based on a set of options, and returns either the mutated cost matrix or
+ * the original, if no options apply.
  */
-export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixOptions): CostMatrix => {
+export const maybeMutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixOptions): CostMatrix => {
   let clonedMatrix: CostMatrix | undefined = undefined;
 
   if (opts.avoidCreeps) {
-    const matrix = clonedMatrix ??= cm.clone()
+    const matrix = clonedMatrix ??= cm.clone();
     Game.rooms[room]?.find(FIND_CREEPS).forEach(c => matrix.set(c.pos.x, c.pos.y, 255));
     Game.rooms[room]?.find(FIND_POWER_CREEPS).forEach(c => matrix.set(c.pos.x, c.pos.y, 255));
   }
   if (opts.avoidSourceKeepers) {
-    const matrix = clonedMatrix ??= cm.clone()
+    const matrix = clonedMatrix ??= cm.clone();
     avoidSourceKeepers(room, matrix);
   }
   if (opts.avoidObstacleStructures || opts.roadCost) {
-    const matrix = clonedMatrix ??= cm.clone()
+    const matrix = clonedMatrix ??= cm.clone();
 
     if (opts.avoidObstacleStructures) {
       Game.rooms[room]?.find(FIND_MY_CONSTRUCTION_SITES).forEach(s => {
@@ -56,7 +58,7 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
     });
   }
   if (opts.avoidTargets) {
-    const matrix = clonedMatrix ??= cm.clone()
+    const matrix = clonedMatrix ??= cm.clone();
     const terrain = Game.map.getRoomTerrain(room);
     for (const t of opts.avoidTargets(room))
       for (const p of calculateNearbyPositions(t.pos, t.range, true))
@@ -67,7 +69,7 @@ export const mutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixO
   }
 
   if (!opts.ignorePortals) {
-    const matrix = clonedMatrix ??= cm.clone()
+    const matrix = clonedMatrix ??= cm.clone();
     const portalCoords = [...(portalSets.get(room)?.values() ?? [])].flatMap(p => {
       if (room === p.room1) return [...p.portalMap.keys()];
       return [...p.portalMap.reversed.keys()];
@@ -83,5 +85,5 @@ export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string
   let cm = actualOpts.roomCallback?.(room);
   if (cm === false) return cm;
   const cloned = cm instanceof PathFinder.CostMatrix ? cm.clone() : new PathFinder.CostMatrix();
-  return mutateCostMatrix(cloned, room, actualOpts);
+  return maybeMutateCostMatrix(cloned, room, actualOpts);
 };
