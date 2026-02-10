@@ -3,8 +3,6 @@ import { portalSets } from 'lib/WorldMap/portals';
 import { calculateNearbyPositions } from '../Movement/selectors';
 import { avoidSourceKeepers } from './sourceKeepers';
 
-export type CostMatrixMutator = (cm: CostMatrix, room: string) => CostMatrix;
-
 export interface CostMatrixOptions {
   avoidCreeps?: boolean;
   avoidObstacleStructures?: boolean;
