@@ -16,10 +16,10 @@ export interface CostMatrixOptions {
 }
 
 /**
- * Maybe mutates a cost matrix based on a set of options, and returns either the mutated cost matrix or
- * the original, if no options apply.
+ * Applies Options to the clone of a CostMatrix, returning the new matrix.
+ * If no Options apply, returns the original matrix.
  */
-export const maybeMutateCostMatrix = (cm: CostMatrix, room: string, opts: CostMatrixOptions): CostMatrix => {
+export const applyCostMatrixOptions = (cm: CostMatrix, room: string, opts: CostMatrixOptions): CostMatrix => {
   let clonedMatrix: CostMatrix | undefined = undefined;
 
   if (opts.avoidCreeps) {
@@ -84,5 +84,5 @@ export const configureRoomCallback = (actualOpts: MoveOpts, targetRooms?: string
   if (targetRooms && !targetRooms.includes(room)) return false; // outside route search space
   let cm = actualOpts.roomCallback?.(room);
   if (cm === false || cm === true) return cm;
-  return maybeMutateCostMatrix(cm || new PathFinder.CostMatrix(), room, actualOpts);
+  return applyCostMatrixOptions(cm || new PathFinder.CostMatrix(), room, actualOpts);
 };
