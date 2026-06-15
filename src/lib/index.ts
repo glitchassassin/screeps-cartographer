@@ -99,6 +99,9 @@ export interface MoveOpts extends PathFinderOpts {
    * By default, portals will be blocked in the cost matrix if we aren't traveling through them
    * to avoid ending up somewhere random. Set this to true to ignore portals in the cost matrix.
    * This does not affect travel through portals.
+   *
+   * **Warning:** This only applies to intrashard portals. Intershard portals will not be
+   * automatically blocked in the cost matrix regardless of this setting.
    */
   ignorePortals?: boolean;
   /**
